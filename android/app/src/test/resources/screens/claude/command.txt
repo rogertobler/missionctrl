@@ -1,0 +1,40 @@
+       2      return a + b
+       3
+       4
+       5 +def subtract(a, b):
+       6 +    return a - b
+       7 +
+       8 +
+       9  def divide(a, b):
+      10      if b == 0:
+      11          raise ValueError("Cannot divide by zero")
+
+● I added subtract(a, b) to calc.py:5, right after add. It returns a - b. Nothing else in the file was changed, and I
+  haven't run it.
+
+  calc.py already had uncommitted changes before I started. I left those alone, so if you commit now, your earlier
+  edits will be included.
+
+✻ Cogitated for 7s · done 17:42
+
+❯ Run python3 calc.py and tell me the output.
+
+  Running the calculator script
+  ⎿  $ python3 calc.py
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Bash command
+ Tip: auto mode handles these prompts for you — choose "switch to auto mode" below
+ Run the calculator script
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ python3 calc.py
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ This command requires approval
+
+ Do you want to proceed?
+ ❯ 1. Yes
+   2. Yes, and don’t ask again for: python3 *
+   3. Yes, and switch to auto mode · auto mode handles these prompts for you
+   4. No
+
+ Esc to cancel · Tab to amend

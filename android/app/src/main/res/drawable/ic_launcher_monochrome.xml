@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): the radar in one colour; the system tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#80FFFFFF" android:strokeWidth="2.4" android:fillColor="#00000000"
+        android:pathData="M22,54a32,32 0 1,0 64,0a32,32 0 1,0 -64,0M33,54a21,21 0 1,0 42,0a21,21 0 1,0 -42,0" />
+    <path android:fillColor="#59FFFFFF" android:pathData="M54,54L54,22A32,32 0 0,1 81.7,38Z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M54,54L81.7,38" />
+    <path android:fillColor="#B3FFFFFF"
+        android:pathData="M36,66a3,3 0 1,0 6,0a3,3 0 1,0 -6,0M67,70a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M63.5,34a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0" />
+</vector>

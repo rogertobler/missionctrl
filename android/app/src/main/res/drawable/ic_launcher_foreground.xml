@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App icon "Radar" on inscribe mint: dark rings and sweep, one waiting agent
+     (white), two others. Background: @color/ic_launcher_background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#6104140D" android:strokeWidth="1.8" android:fillColor="#00000000"
+        android:pathData="M22,54a32,32 0 1,0 64,0a32,32 0 1,0 -64,0M33,54a21,21 0 1,0 42,0a21,21 0 1,0 -42,0M44,54a10,10 0 1,0 20,0a10,10 0 1,0 -20,0" />
+    <path android:strokeColor="#2E04140D" android:strokeWidth="1.8"
+        android:pathData="M54,22V86M22,54H86" />
+    <path android:pathData="M54,54L54,22A32,32 0 0,1 81.7,38Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="54" android:gradientRadius="34"
+                android:startColor="#0004140D" android:endColor="#7304140D" />
+        </aapt:attr>
+    </path>
+    <path android:strokeColor="#FF04140D" android:strokeWidth="2.6" android:strokeLineCap="round"
+        android:pathData="M54,54L81.7,38" />
+    <path android:fillColor="#9904140D"
+        android:pathData="M36.2,66a2.8,2.8 0 1,0 5.6,0a2.8,2.8 0 1,0 -5.6,0M67.2,70a2.8,2.8 0 1,0 5.6,0a2.8,2.8 0 1,0 -5.6,0" />
+    <path android:fillColor="#59FFFFFF" android:pathData="M60.5,34a7.5,7.5 0 1,0 15,0a7.5,7.5 0 1,0 -15,0" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M64,34a4,4 0 1,0 8,0a4,4 0 1,0 -8,0" />
+</vector>

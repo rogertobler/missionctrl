@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar icon: the "Mission" target, white strokes on transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M12,3a9,9 0 1,0 0.01,0zM12,8a4,4 0 1,0 0.01,0zM12,3v3M12,18v3M3,12h3M18,12h3" />
+</vector>

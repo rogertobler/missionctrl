@@ -1,0 +1,8 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Question 1/1: Which mathematical operation would you like to add next to [calc.py](file:///tmp/mct/play/calc.py)?
+  1. (Recommended) Subtraction (`subtract(a, b)`)
+  2. Exponentiation (`power(a, b)`)
+  3. Modulo (`modulo(a, b)`)
+> 4. Write-in...
+  ↑/↓ Navigate · enter Write-in · esc Skip
+esc to cancel                                                                                    Gemini 3.8 Flash · high

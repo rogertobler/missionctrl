@@ -1,0 +1,4 @@
+[bindings.kotlin]
+package_name = "ch.inscribe.missionctrl.core"
+cdylib_name = "mc_ffi"
+generate_immutable_records = true

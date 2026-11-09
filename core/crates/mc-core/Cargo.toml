@@ -1,0 +1,19 @@
+[package]
+name = "mc-core"
+description = "MissionCtrl core: SSH transport, herdr API client, multi-host state"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+russh.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+getrandom = { version = "0.4", features = ["sys_rng"] }
+zeroize = "1"
+vt100 = "0.16"
+base64 = "0.22"

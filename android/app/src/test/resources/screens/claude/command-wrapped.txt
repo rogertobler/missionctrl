@@ -1,0 +1,41 @@
+
+     - python3 calc.py still prints 5 2.0
+     - python3 -c "import calc; print(calc.power(2, 10), calc.cube(3))" prints 1024 27
+
+● Update(calc.py)
+  ⎿  Added 8 lines
+      16      return a * b
+      17
+      18
+      19 +def power(a, b):
+      20 +    return a ** b
+      21 +
+      22 +
+      23 +def cube(a):
+      24 +    return power(a, 3)
+      25 +
+      26 +
+      27  if __name__ == "__main__":
+      28      print(add(2, 3), divide(6, 3))
+
+● Running 1 shell command…
+  ⎿  $ python3 calc.py && python3 -c "import calc; print(calc.power(2, 10), calc.cube(3))"
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Bash command
+ Tip: auto mode handles these prompts for you — choose "switch to auto mode" below
+ Run the script and check power and cube
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ │ python3 calc.py && python3 -c "import calc; print(calc.power(2, 10), calc.cube(3))"
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ This command requires approval
+
+ Do you want to proceed?
+ ❯ 1. Yes
+   2. Yes, and don't ask again for python3 calc.py and "python3 -c \"import calc; print(calc.power(2, 10),
+      calc.cube(3))\"" commands in /tmp/mct/play
+   3. Yes, and switch to auto mode · auto mode handles these prompts for you
+   4. No
+
+ Esc to cancel · Tab to amend
+

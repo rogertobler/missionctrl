@@ -1,0 +1,22 @@
+{
+  "known_hosts": "~/.ssh/known_hosts",
+  "hosts": [
+    { "id": "local", "name": "workstation", "host": "localhost", "user": "me", "local": true },
+    {
+      "id": "server1",
+      "name": "server1",
+      "host": "server1.example.com",
+      "port": 22,
+      "user": "me",
+      "auth": { "kind": "agent", "socket": "/run/user/1000/ssh-agent.sock" }
+    },
+    {
+      "id": "server2",
+      "name": "server2",
+      "host": "server2.example.com",
+      "user": "me",
+      "session": "work",
+      "auth": { "kind": "key_file", "path": "~/.ssh/id_ed25519" }
+    }
+  ]
+}

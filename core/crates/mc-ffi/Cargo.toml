@@ -1,0 +1,24 @@
+[package]
+name = "mc-ffi"
+description = "UniFFI bindings of the MissionCtrl core for Kotlin and Swift"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "mc_ffi"
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+mc-core.workspace = true
+mc-voice = { path = "../mc-voice" }
+tokio.workspace = true
+thiserror.workspace = true
+uniffi = "0.32"
+log = "0.4"
+# Forward tracing events to `log` so they reach logcat on Android.
+tracing = { workspace = true, features = ["log"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.15"

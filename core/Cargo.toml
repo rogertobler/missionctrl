@@ -1,0 +1,28 @@
+[workspace]
+resolver = "3"
+members = ["crates/mc-core", "crates/mc-cli", "crates/mc-ffi", "crates/mc-voice", "crates/uniffi-bindgen"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[workspace.dependencies]
+mc-core = { path = "crates/mc-core" }
+russh = { version = "0.64", default-features = false, features = ["ring", "flate2", "rsa"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs", "process"] }
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+# Symbols stay: the Kotlin bindings are generated from the UniFFI metadata in the library;
+# the Android build strips the .so when packaging the APK.
+strip = "debuginfo"

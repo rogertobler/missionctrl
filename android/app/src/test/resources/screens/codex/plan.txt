@@ -1,0 +1,40 @@
+› Plan a small command line interface for calc.py. Before planning, ask me 2 short multiple-choice questions about it …
+
+  # Small CLI for calc.py
+
+  ## Summary
+
+  Add subcommands for add and divide. Accept two numbers and print the result to stdout.
+
+  ## Implementation
+
+  • Replace the current demonstration in __main__ with a main(argv=None) entry point. Keep the existing add() and
+    divide() functions.
+
+  • Support python calc.py add 2 3 and python calc.py divide 6 3, plus -h and --help.
+
+  • For an unknown command, the wrong number of arguments, a nonnumeric value, or division by zero, print a short German
+    message to stderr and return exit code 2. Successful calculations return 0.
+
+  ## Verification
+
+  Check both commands, help, and each error case. Confirm that each result appears only on stdout and each error appears
+  only on stderr.
+
+  ## Assumptions
+
+  Arguments are decimal numbers parsed as floats; results use Python’s normal float formatting. The existing uncommitted
+  change to divide() is preserved.
+
+
+  Worked for 1m 1s • 3:59 PM
+
+
+  Implement this plan?
+
+
+› 1. Yes, implement this plan          Switch to Default and start coding
+  2. Yes, clear context and implement  Start a fresh thread (current context: 4% used)
+  3. No, stay in Plan mode             Continue planning with the model
+
+  enter select · esc back

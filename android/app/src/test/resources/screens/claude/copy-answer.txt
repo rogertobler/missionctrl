@@ -1,0 +1,47 @@
+
+
+❯ Fuehre zuerst im Terminal sleep 30 aus. Danach stell mir mit
+  AskUserQuestion eine Frage mit drei Optionen: Lieblingsfarbe
+  Rot, Gruen oder Blau. Sonst nichts tun.
+
+  Ran 1 shell command
+
+● sleep 30 läuft im Hintergrund, weil die Umgebung sleep im
+  Vordergrund blockiert. Sobald es fertig ist, stelle ich dir die
+  Frage.
+
+✻ Sautéed for 8s · done 2:38 PM
+
+● Background command "Wait 30 seconds" completed (exit code 0)
+
+● User declined to answer questions
+  ⎿  · Was ist deine Lieblingsfarbe? (Rot / Grün / Blau)
+
+✻ Cooked for 2s · done 2:40 PM
+
+❯ Fuehre im Terminal sleep 20 aus (Hintergrund ist ok). Danach
+  stell mir die gleiche Frage mit AskUserQuestion nochmals:
+  Lieblingsfarbe Rot, Gruen oder Blau.
+
+  Ran 1 shell command
+
+● sleep 20 läuft im Hintergrund. Sobald es fertig ist, stelle ich
+  dir die Frage nochmals.
+
+✻ Worked for 4s · done 2:40 PM
+
+● Background command "Wait 20 seconds" completed (exit code 0)
+
+● User answered Claude's questions:
+  ⎿  · Was ist deine Lieblingsfarbe? → Grün
+
+● sleep 20 ist durchgelaufen. Danach hast du die Frage mit Grün
+  beantwortet.
+
+✻ Baked for 4s · done 2:41 PM
+
+─────────────────────────────────────────────────────────────────
+❯
+─────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)
+

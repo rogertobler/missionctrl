@@ -1,0 +1,21 @@
+# Rust
+target/
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Internal notes and assistant instructions: local only, not part of this repository
+/docs/
+/CLAUDE.md
+/.claude/

@@ -1,0 +1,840 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  English, the default. A further language: copy this file to values-xx/strings.xml
+  (xx = language code, e.g. values-fr) and translate the texts; the build adds it to the
+  language list in the settings and to Android's app languages.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name" translatable="false">MissionCtrl</string>
+
+    <!-- Settings › Language -->
+    <string name="language">Language</string>
+    <string name="language_system">System</string>
+    <string name="language_system_hint">Follows Android\'s language; English if the app isn\'t available in that language</string>
+
+    <!-- Quick keys (ui/Keys.kt): label on the button, description for screen readers and the sheet -->
+    <string name="key_mic_label">Voice</string>
+    <string name="key_mic_desc">Voice input</string>
+    <string name="key_kb_label">Keyboard</string>
+    <string name="key_kb_desc">Type an answer</string>
+    <string name="key_up_label" translatable="false">↑</string>
+    <string name="key_up_desc">Arrow up</string>
+    <string name="key_down_label" translatable="false">↓</string>
+    <string name="key_down_desc">Arrow down</string>
+    <string name="key_left_label" translatable="false">←</string>
+    <string name="key_left_desc">Arrow left</string>
+    <string name="key_right_label" translatable="false">→</string>
+    <string name="key_right_desc">Arrow right</string>
+    <string name="key_enter_label" translatable="false">⏎ Enter</string>
+    <string name="key_enter_desc" translatable="false">Enter</string>
+    <string name="key_stop_label">Stop</string>
+    <string name="key_stop_desc">Stop – interrupt the agent</string>
+    <string name="key_tab_label" translatable="false">Tab</string>
+    <string name="key_tab_desc" translatable="false">Tab</string>
+    <string name="key_stab_label" translatable="false">⇧Tab</string>
+    <string name="key_stab_desc" translatable="false">Shift+Tab</string>
+    <string name="key_ctrlc_label" translatable="false">^C</string>
+    <string name="key_ctrlc_desc" translatable="false">Ctrl+C</string>
+    <string name="key_space_label">Space</string>
+    <string name="key_space_desc">Space bar</string>
+    <string name="key_bksp_label" translatable="false">⌫</string>
+    <string name="key_bksp_desc">Backspace</string>
+    <string name="key_home_label" translatable="false">Home</string>
+    <string name="key_home_desc">Line start</string>
+    <string name="key_end_label" translatable="false">End</string>
+    <string name="key_end_desc">Line end</string>
+    <string name="key_pgup_label" translatable="false">PgUp</string>
+    <string name="key_pgup_desc">Page up</string>
+    <string name="key_pgdn_label" translatable="false">PgDn</string>
+    <string name="key_pgdn_desc">Page down</string>
+    <string name="key_del_label" translatable="false">Del</string>
+    <string name="key_del_desc">Delete</string>
+    <string name="key_n1_label" translatable="false">1</string>
+    <string name="key_n1_desc">Option 1</string>
+    <string name="key_n2_label" translatable="false">2</string>
+    <string name="key_n2_desc">Option 2</string>
+    <string name="key_n3_label" translatable="false">3</string>
+    <string name="key_n3_desc">Option 3</string>
+    <string name="key_paste_label">Paste</string>
+    <string name="key_paste_desc">Paste (text or image)</string>
+    <string name="key_copy_label">Copy</string>
+    <string name="key_copy_desc">Copy the last answer</string>
+    <string name="key_file_label">Attach</string>
+    <string name="key_file_desc">Attach an image or file</string>
+    <string name="key_ctrl_label" translatable="false">Ctrl</string>
+    <string name="key_ctrl_desc">Ctrl + next key</string>
+    <string name="key_alt_label" translatable="false">Alt</string>
+    <string name="key_alt_desc">Alt + next key</string>
+    <string name="key_ctrlalt_label" translatable="false">Ctrl+Alt</string>
+    <string name="key_ctrlalt_desc">Ctrl+Alt + next key</string>
+    <string name="key_shift_label" translatable="false">Shift</string>
+    <string name="key_shift_desc">Shift + next key</string>
+    <string name="keygroup_combine">Combine</string>
+    <string name="keygroup_input">Input</string>
+    <string name="keygroup_navigation">Navigation</string>
+    <string name="keygroup_control">Control</string>
+    <string name="keygroup_menu">Menu</string>
+
+    <!-- Agent status, age of a waiting question -->
+    <string name="status_waiting">waiting</string>
+    <string name="status_done">done</string>
+    <string name="status_working">working</string>
+    <string name="status_idle">ready</string>
+    <string name="age_now">now</string>
+    <string name="age_minutes">%1$d min</string>
+
+    <!-- All keys sheet, Ctrl/Alt (ui/AllKeys.kt) -->
+    <string name="allkeys_title">All keys</string>
+    <string name="allkeys_sent">sent: %1$s</string>
+    <string name="allkeys_hint">Long-press a key to add it to the bar.</string>
+    <string name="key_next">next key</string>
+    <string name="mod_hint">next key or a button</string>
+    <string name="mod_cancel">Cancel %1$s</string>
+    <string name="bar_full">The bar is full: remove a button first</string>
+    <string name="bar_added">“%1$s” is now in the bar</string>
+
+    <!-- ===== Main screens: home, terminal, navigation, input, history, TUI, path line (ui/*.kt) ===== -->
+    <!-- Shared (ui/Common.kt and several screens) -->
+    <string name="common_cancel">Cancel</string>
+    <string name="common_error">Error</string>
+    <string name="common_menu">Menu</string>
+    <string name="common_move_up">Move up</string>
+    <string name="common_move_down">Move down</string>
+    <string name="common_settings">Settings</string>
+    <string name="common_unpin">Unpin from dock</string>
+    <string name="common_view_list">List</string>
+    <string name="common_view_workspace">Workspace</string>
+
+    <!-- Start page (ui/MissionScreen.kt) -->
+    <plurals name="mission_waiting_count">
+        <item quantity="one">%1$d waiting</item>
+        <item quantity="other">%1$d waiting</item>
+    </plurals>
+    <string name="mission_collapse_list">Collapse list</string>
+    <string name="mission_server_issue">%1$s: %2$s</string>
+    <string name="mission_issue_host_key_unknown">Check and confirm the host key</string>
+    <string name="mission_issue_host_key_changed">The host key has changed!</string>
+    <string name="mission_issue_auth_failed">Login rejected</string>
+    <string name="mission_waiting_for_you">Waiting for you</string>
+    <string name="mission_tabs">Tabs</string>
+    <string name="mission_no_more_tabs">No other tabs.</string>
+    <string name="mission_move">Move</string>
+    <string name="mission_workspace_settings">Settings for workspace “%1$s”</string>
+    <string name="mission_no_server">No server yet</string>
+    <string name="mission_no_server_hint">Add a server that runs herdr. The app connects over SSH.</string>
+    <string name="mission_add_server">Add server</string>
+    <string name="mission_options">Options</string>
+    <string name="mission_shell" translatable="false">shell</string>
+    <string name="mission_duration_now">just now</string>
+    <string name="mission_duration_hours">%1$d h</string>
+    <string name="mission_duration_days">%1$d d</string>
+
+    <!-- Start page › card of a waiting agent, plan, answer field -->
+    <string name="mission_choice_changed">The options have changed – please choose again</string>
+    <string name="mission_close_card">Close card</string>
+    <string name="mission_question_progress">Question %1$d of %2$d</string>
+    <string name="mission_all_answered" tools:ignore="PluralsCandidate">All %1$d answered – submit now</string>
+    <string name="mission_answer_sent">Answer sent – waiting for the next question…</string>
+    <string name="mission_read_plan">Read plan</string>
+    <string name="mission_plan">Plan</string>
+    <string name="mission_plan_not_found">The plan can\'t be found on the server.</string>
+    <string name="mission_plan_load_failed">Loading failed</string>
+    <string name="mission_plan_loading">Loading the plan…</string>
+    <string name="mission_option_desc">Option %1$d: %2$s</string>
+    <string name="mission_cancel_voice">Cancel voice input</string>
+    <string name="mission_done_speaking">Done speaking</string>
+    <string name="mission_answer_hint">Answer…</string>
+    <string name="mission_discard">Discard</string>
+    <string name="mission_speak">Speak</string>
+    <string name="mission_keys_to_pane">Keys straight to the pane</string>
+    <string name="mission_send">Send</string>
+
+    <!-- Terminal (ui/DetailScreen.kt) -->
+    <string name="detail_opening">Opening…</string>
+    <string name="detail_no_tab">No tab open.</string>
+    <string name="detail_not_there">This tab is not here yet. On a slow connection it may take a while; it opens by itself once it is there.</string>
+    <string name="detail_uploaded">Uploaded: %1$s</string>
+    <string name="detail_uploading">Uploading…</string>
+    <string name="detail_back">Back</string>
+    <string name="detail_switch_agent_desc">Switch agent: %1$s</string>
+    <string name="detail_pin">Pin to dock</string>
+    <string name="detail_to_end">Jump to the end</string>
+    <string name="detail_clip_label">Answer</string>
+    <string name="detail_copied">Last answer copied</string>
+    <string name="detail_clipboard_empty">Clipboard is empty</string>
+
+    <!-- Terminal › Claude's history -->
+    <string name="detail_history_busy">Loading history… Claude is briefly in its transcript view.</string>
+    <string name="detail_history_loading" tools:ignore="PluralsCandidate">Loading the last %1$d lines…</string>
+    <string name="detail_history_start">Start of history</string>
+    <string name="detail_history_after_rest">History loads once Claude is idle</string>
+    <string name="detail_history_not_loaded">History not loaded yet</string>
+    <string name="detail_history_fetch" tools:ignore="PluralsCandidate">Fetch the last %1$d lines</string>
+    <string name="detail_history_reload">Reload</string>
+
+    <!-- Terminal › switcher -->
+    <string name="detail_switch_to">Switch to</string>
+    <string name="detail_close_tab">Close tab “%1$s”</string>
+    <string name="detail_new_tab">New tab</string>
+    <string name="detail_new_tab_in">New tab in %1$s</string>
+
+    <!-- Navigation: background question, dock, menu, side list (ui/App.kt) -->
+    <string name="appnav_background_title">Stay connected in the background?</string>
+    <string name="appnav_background_text">MissionCtrl then lets you know when an agent is waiting for you or done, even when the app is closed. Android requires a status notification for this; it is silent and can be hidden. Everything stays on the device, with no push service. You can change this anytime in Settings › Background &amp; notifications.</string>
+    <string name="appnav_background_yes">Yes, stay connected</string>
+    <string name="appnav_background_no">No</string>
+    <string name="appnav_side_handle_desc">List width: drag, double-tap for the default</string>
+    <string name="appnav_mission">Mission</string>
+    <string name="appnav_workspaces">Workspaces</string>
+    <string name="appnav_terminal">Terminal</string>
+    <string name="appnav_pinned">Pinned</string>
+    <string name="appnav_pinned_desc">Pinned: %1$s %2$s</string>
+    <string name="appnav_pinned_options_desc">Pinned: %1$s %2$s – long-press for options</string>
+    <string name="appnav_open">Open</string>
+    <string name="appnav_move_left">Move left</string>
+    <string name="appnav_move_right">Move right</string>
+    <string name="appnav_add_pin">Pin</string>
+    <string name="appnav_pin_tab">Pin a tab</string>
+    <string name="appnav_pin_tab_hint">Tap a tab to pin it to the dock. To unpin, long-press it in the dock.</string>
+    <string name="appnav_pinned_mark">pinned</string>
+    <string name="appnav_pin_none">No open tabs.</string>
+    <string name="appnav_expand_list">Expand list</string>
+
+    <!-- Voice input, attachments (ui/Input.kt) -->
+    <string name="input_recognizer_not_found">Speech recognition not found</string>
+    <string name="input_no_on_device_recognizer">No on-device speech recognition available – choose a service in the settings</string>
+    <string name="input_recognizer_error">Speech recognition: error %1$d</string>
+    <string name="input_no_whisper_model">No Whisper model downloaded – Settings › Speech recognition</string>
+    <string name="input_mic_unavailable">Microphone not available</string>
+    <string name="input_listening">Listening…</string>
+    <string name="input_listening_time">Listening… %1$d:%2$02d</string>
+    <string name="input_recognizing">Recognizing…</string>
+    <string name="input_whisper_error">Whisper: %1$s</string>
+    <string name="input_file_too_large">The file is too large (25 MB at most)</string>
+
+    <!-- Live terminal (ui/Tui.kt) -->
+    <string name="tui_terminal_desc">Terminal %1$s</string>
+    <string name="tui_connecting">Connecting terminal…</string>
+    <string name="tui_connect_failed">Connection failed</string>
+    <string name="tui_taken_over">Another device took over the terminal.</string>
+    <string name="tui_take_back">Take it back</string>
+    <string name="tui_connection_lost">Connection to the terminal lost – connecting again</string>
+    <string name="tui_too_large">The terminal is too large to show</string>
+
+    <!-- Claude's history (ui/History.kt) -->
+    <string name="history_not_normal_view">Claude isn\'t in its normal view right now.</string>
+    <string name="history_only_last_lines" tools:ignore="PluralsCandidate">The last %1$d lines – older ones are missing.</string>
+
+    <!-- Settings › Path line (ui/AgentLooks.kt) -->
+    <string name="agentlooks_path_line_title">Line under the name</string>
+    <string name="agentlooks_preview">Preview</string>
+    <string name="agentlooks_nothing_chosen">(nothing selected)</string>
+    <string name="agentlooks_field_server">Server</string>
+    <string name="agentlooks_field_workspace">Workspace</string>
+    <string name="agentlooks_field_tab">Tab</string>
+    <string name="agentlooks_field_branch">Git branch</string>
+    <string name="agentlooks_field_dir">Directory</string>
+    <string name="agentlooks_field_path">Path</string>
+    <string name="agentlooks_field_repo">Repo name</string>
+    <string name="agentlooks_field_title">Title</string>
+    <string name="agentlooks_field_move_up">Move %1$s up</string>
+    <string name="agentlooks_field_move_down">Move %1$s down</string>
+    <string name="agentlooks_separator">Separator</string>
+    <string name="agentlooks_separator_desc">Separator %1$s</string>
+    <string name="agentlooks_git_hint">The app fetches the Git branch, repo name and path from the server over SSH (git -C &lt;directory&gt;) while it is open.</string>
+
+    <!-- Look: color and icon (ui/AgentLooks.kt) -->
+    <string name="agentlooks_color">Color</string>
+    <string name="agentlooks_color_auto">Auto</string>
+    <string name="agentlooks_color_auto_desc">Automatic from the name</string>
+    <string name="agentlooks_color_none">None</string>
+    <string name="agentlooks_color_none_desc">No color</string>
+    <string name="agentlooks_color_like_workspace">Like workspace</string>
+    <string name="agentlooks_color_like_workspace_desc">The workspace\'s color</string>
+    <string name="agentlooks_default">Default</string>
+    <string name="agentlooks_color_default_desc">Default color</string>
+    <string name="agentlooks_color_n">Color %1$d</string>
+    <string name="agentlooks_custom_color">Custom color</string>
+    <string name="agentlooks_custom">Custom</string>
+    <string name="agentlooks_workspace_custom_hint">Custom color. All tabs without a color of their own show it.</string>
+    <string name="agentlooks_workspace_auto_hint">Automatic: a fixed color derived from the name. Tabs without a color of their own show it.</string>
+    <string name="agentlooks_workspace_none_hint">None: each tab shows its own color, tabs without one a gray bar.</string>
+    <string name="agentlooks_workspace_palette_hint">All tabs without a color of their own show this color.</string>
+    <string name="agentlooks_tab_inherit_none_hint">Like the workspace – it has no color, so a gray bar.</string>
+    <string name="agentlooks_tab_inherit_hint">Like the workspace.</string>
+    <string name="agentlooks_tab_custom_hint">Custom color, takes precedence over the workspace\'s color.</string>
+    <string name="agentlooks_agent_default_hint">Default: in the text color.</string>
+    <string name="agentlooks_agent_color_hint">Colors the agent\'s icon.</string>
+    <string name="agentlooks_icon">Icon</string>
+    <string name="agentlooks_emoji">Emoji</string>
+    <string name="agentlooks_own_emoji_hint">Your own emoji (keyboard ☺)</string>
+    <string name="agentlooks_take">Use</string>
+    <string name="agentlooks_hue">Hue</string>
+    <string name="agentlooks_saturation">Saturation</string>
+    <string name="agentlooks_brightness">Brightness</string>
+
+    <!-- Settings › Agents (ui/AgentLooks.kt) -->
+    <string name="agentlooks_agents_title">Agents</string>
+    <string name="agentlooks_agent_symbol">Agent icon</string>
+    <string name="agentlooks_symbol_auto">Automatic</string>
+    <string name="agentlooks_symbol_always">Always</string>
+    <string name="agentlooks_symbol_never">Never</string>
+    <string name="agentlooks_symbol_auto_hint">Only when different agent types are running (e.g. Claude and Codex) or an agent has a look of its own.</string>
+    <string name="agentlooks_symbol_always_hint">Always before the name, even when all agents are of the same type.</string>
+    <string name="agentlooks_symbol_never_hint">Never – not even with a look of its own.</string>
+    <string name="agentlooks_look_per_agent">Look per agent</string>
+    <string name="agentlooks_no_agents">No agents seen yet.</string>
+    <string name="agentlooks_agent_type">Agent type</string>
+    <string name="agentlooks_herdr_name">Name in herdr</string>
+    <string name="agentlooks_agents_hint">Order of precedence: a tab\'s own look (workspace page › tab settings), then the look for the agent\'s name in herdr, then the one for its type. “Default” resets color and icon.</string>
+    <string name="agentlooks_default_icon">Default icon</string>
+    <string name="agentlooks_type_icon">The type\'s icon</string>
+
+    <!-- ===== SSH keys, workspaces, tab sheet ===== -->
+    <!-- SSH keys › Android's unlock prompt (ui/SshKeys.kt, Unlock) -->
+    <string name="sshkeys_unlock_title">Unlock keys</string>
+    <string name="sshkeys_unlock_subtitle">For your SSH keys in MissionCtrl</string>
+    <string name="sshkeys_protect_title">Protect key</string>
+    <string name="sshkeys_protect_subtitle">Confirm that “%1$s” gets this protection</string>
+
+    <!-- SSH keys › list (ui/SshKeys.kt, KeysScreen) -->
+    <string name="sshkeys_title">SSH keys</string>
+    <string name="sshkeys_error">Error</string>
+    <string name="sshkeys_write_failed">Couldn\'t write the file</string>
+    <string name="sshkeys_saved">Saved, encrypted with your passphrase</string>
+    <string name="sshkeys_rename_desc">Rename “%1$s”</string>
+    <string name="sshkeys_origin_generated">created</string>
+    <string name="sshkeys_origin_imported">imported</string>
+    <string name="sshkeys_delete_desc">Delete “%1$s”</string>
+    <string name="sshkeys_locked_tap">Locked – tap to unlock</string>
+    <string name="sshkeys_protection_none_line">Protection: none</string>
+    <string name="sshkeys_protection_protected_line">Protection: biometrics or PIN</string>
+    <string name="sshkeys_copy_public">Copy public key</string>
+    <string name="sshkeys_copy">Copy</string>
+    <string name="sshkeys_public_copied">Public key copied</string>
+    <string name="sshkeys_export_named">Export “%1$s”</string>
+    <string name="sshkeys_export">Export</string>
+    <string name="sshkeys_add">Add</string>
+    <string name="sshkeys_create_title">Create new key</string>
+    <string name="sshkeys_create_subtitle">Ed25519, with a name and optional protection</string>
+    <string name="sshkeys_import_clipboard_title">Import from clipboard</string>
+    <string name="sshkeys_import_clipboard_subtitle">OpenSSH, PEM or PuTTY, also with a passphrase</string>
+    <string name="sshkeys_clipboard_no_text">No text on the clipboard</string>
+    <string name="sshkeys_import_file_title">Import from file</string>
+    <string name="sshkeys_import_file_subtitle">e.g. id_ed25519 or an export from MissionCtrl</string>
+    <string name="sshkeys_none_title">No key yet</string>
+    <string name="sshkeys_none_text">MissionCtrl does not create a key by itself. Create one here or import one you have. The app also asks for one when you add your first server.</string>
+    <string name="sshkeys_fido_title">Use YubiKey / FIDO</string>
+    <string name="sshkeys_fido_subtitle">coming in a later update</string>
+    <string name="sshkeys_storage_note">Private keys are stored only in this app, encrypted with the Android Keystore. After a reinstall or on a new phone they are gone – unless you exported them. An export is always encrypted with a passphrase.</string>
+    <string name="sshkeys_delete_title">Delete “%1$s”?</string>
+    <string name="sshkeys_delete_text">You won\'t be able to log in to servers that use this key anymore.</string>
+    <string name="sshkeys_delete">Delete</string>
+
+    <!-- SSH keys › protection choice (ui/SshKeys.kt, ProtectionChoice) -->
+    <string name="sshkeys_protection_label">Protection when connecting</string>
+    <string name="sshkeys_protection_none">None</string>
+    <string name="sshkeys_protection_none_subtitle">The app unlocks it by itself</string>
+    <string name="sshkeys_protection_recommended">recommended</string>
+    <string name="sshkeys_protection_protected">Biometrics or PIN</string>
+    <string name="sshkeys_protection_protected_subtitle">Fingerprint, face or device PIN on the first connection after the app starts</string>
+    <string name="sshkeys_protection_needs_lock">Needs a screen lock (PIN, pattern or password)</string>
+    <string name="sshkeys_protection_restart_note">After the phone restarts, background connections and notifications resume once you unlock your SSH key.</string>
+
+    <!-- SSH keys › dialogs: new, import, rename (ui/SshKeys.kt) -->
+    <string name="sshkeys_name">Name</string>
+    <string name="sshkeys_cancel">Cancel</string>
+    <string name="sshkeys_new_title">New key</string>
+    <string name="sshkeys_authorized_keys_hint">This is how it appears in authorized_keys on the server:</string>
+    <string name="sshkeys_create">Create</string>
+    <string name="sshkeys_created">Key “%1$s” created</string>
+    <string name="sshkeys_imported_name">Imported key</string>
+    <string name="sshkeys_imported">Key “%1$s” imported</string>
+    <string name="sshkeys_wrong_passphrase">Wrong passphrase</string>
+    <string name="sshkeys_import_title">Import key</string>
+    <string name="sshkeys_file_passphrase">File passphrase</string>
+    <string name="sshkeys_import">Import</string>
+    <string name="sshkeys_rename_title">Rename</string>
+    <string name="sshkeys_rename_note">Applies in the app and the next time you copy the public key. Where it is already set up on a server, the old name stays there; the key keeps working.</string>
+    <string name="sshkeys_save">Save</string>
+
+    <!-- SSH keys › export dialog (ui/SshKeys.kt, ExportKeyDialog) -->
+    <string name="sshkeys_export_note">Saves the private key as a file, encrypted with your passphrase. “Import from file” brings it back, even on a new phone.</string>
+    <string name="sshkeys_passphrase_min">Passphrase (at least 8 characters)</string>
+    <string name="sshkeys_passphrase_repeat">Repeat passphrase</string>
+    <string name="sshkeys_passphrase_too_short">Too short – at least 8 characters.</string>
+    <string name="sshkeys_passphrase_mismatch">The two entries don\'t match.</string>
+    <string name="sshkeys_export_protected_note">This key is protected: Android asks for biometrics or PIN first.</string>
+    <string name="sshkeys_export_keep_apart">Keep the file and the passphrase apart, e.g. the passphrase in a password manager.</string>
+    <string name="sshkeys_save_file">Save file</string>
+
+    <!-- Workspaces › list (ui/Workspaces.kt, WorkspacesScreen) -->
+    <string name="workspaces_menu">Menu</string>
+    <string name="workspaces_title">Workspaces</string>
+    <string name="workspaces_settings">Settings</string>
+    <string name="workspaces_passive">passive</string>
+    <string name="workspaces_new_on_server">New workspace on %1$s</string>
+    <string name="workspaces_tap_to_connect">Tap to connect</string>
+    <string name="workspaces_move">Move</string>
+    <string name="workspaces_ws_settings_desc">Settings for workspace “%1$s”</string>
+    <string name="workspaces_options">Options</string>
+    <string name="workspaces_no_servers">No servers yet. Settings › Servers.</string>
+
+    <!-- Workspaces › connection state, short (ui/Workspaces.kt, connectionShortRes) -->
+    <string name="workspaces_conn_online">online</string>
+    <string name="workspaces_conn_connecting">connecting…</string>
+    <string name="workspaces_conn_reconnecting">retrying…</string>
+    <string name="workspaces_conn_host_key_unknown">Check host key</string>
+    <string name="workspaces_conn_host_key_changed">Host key changed!</string>
+    <string name="workspaces_conn_auth_failed">Login rejected</string>
+    <string name="workspaces_conn_failed">Error</string>
+    <string name="workspaces_conn_offline">offline</string>
+
+    <!-- Workspaces › new workspace / new tab form (ui/Workspaces.kt, StartForm) -->
+    <string name="workspaces_new_workspace">New workspace</string>
+    <string name="workspaces_ws_name_hint">e.g. api</string>
+    <string name="workspaces_ws_cwd_hint">~</string>
+    <string name="workspaces_new_tab_in">New tab in %1$s</string>
+    <string name="workspaces_workspace">Workspace</string>
+    <string name="workspaces_tab_name_hint">e.g. tests</string>
+    <string name="workspaces_name">Name</string>
+    <string name="workspaces_start_with">Start with</string>
+    <string name="workspaces_start_shell">Shell</string>
+    <string name="workspaces_command">Command</string>
+    <string name="workspaces_command_hint">e.g. npm test</string>
+    <string name="workspaces_directory">Directory</string>
+    <string name="workspaces_no_such_dir">No such directory on the server: %1$s</string>
+    <string name="workspaces_creating">Creating…</string>
+    <string name="workspaces_create">Create</string>
+    <string name="workspaces_cancel">Cancel</string>
+    <string name="workspaces_back">Back</string>
+
+    <!-- Workspaces › close a tab or workspace (ui/Workspaces.kt) -->
+    <string name="workspaces_close_tab_title">Close tab “%1$s”?</string>
+    <string name="workspaces_close_tab_text">A running agent in it will be stopped. This can\'t be undone.</string>
+    <string name="workspaces_close_last_tab_text">It\'s the last tab: workspace “%1$s” closes with it. A running agent in it will be stopped. This can\'t be undone.</string>
+    <string name="workspaces_close_ws_title">Close workspace “%1$s”?</string>
+    <plurals name="workspaces_close_ws_text">
+        <item quantity="one">Its tab and any running agent in it will be stopped. This can\'t be undone.</item>
+        <item quantity="other">All %1$d tabs and any running agents in them will be stopped. This can\'t be undone.</item>
+    </plurals>
+    <string name="workspaces_close">Close</string>
+
+    <!-- Workspaces › one workspace's settings (ui/Workspaces.kt, WorkspaceScreen) -->
+    <string name="workspaces_gone">This workspace no longer exists.</string>
+    <string name="workspaces_error">Error</string>
+    <string name="workspaces_done">Done</string>
+    <string name="workspaces_rename">Rename workspace</string>
+    <string name="workspaces_tabs">Tabs</string>
+    <string name="workspaces_reorder">Reorder</string>
+    <string name="workspaces_move_up">Move “%1$s” up</string>
+    <string name="workspaces_move_down">Move “%1$s” down</string>
+    <string name="workspaces_tab_settings_desc">Settings for tab “%1$s”</string>
+    <string name="workspaces_close_tab_desc">Close tab “%1$s”</string>
+    <string name="workspaces_new_tab">New tab</string>
+    <string name="workspaces_look">Look</string>
+    <string name="workspaces_no_icon">No icon (color bar)</string>
+    <string name="workspaces_behavior">Behavior</string>
+    <string name="workspaces_bind_to_name">Bind to the name “%1$s”</string>
+    <string name="workspaces_bind_on">Color, icon and behavior come back as soon as a workspace has this name – even after closing it.</string>
+    <string name="workspaces_bind_off">Applies only while this workspace is open.</string>
+    <string name="workspaces_notifications">Notifications</string>
+    <string name="workspaces_notifications_subtitle">when an agent is waiting or done</string>
+    <string name="workspaces_close_workspace">Close workspace</string>
+    <string name="workspaces_tab_named">Tab “%1$s”</string>
+    <string name="workspaces_agent_icon">The agent\'s icon</string>
+    <string name="workspaces_save">Save</string>
+
+    <!-- Tab sheet, long press on a tab (ui/TabSheet.kt) -->
+    <string name="tabsheet_open">Open</string>
+    <string name="tabsheet_unpin">Unpin from dock</string>
+    <string name="tabsheet_pin">Pin to dock</string>
+    <string name="tabsheet_ws_settings">Settings for workspace “%1$s”</string>
+    <string name="tabsheet_order">Order</string>
+    <string name="tabsheet_tab">Tab</string>
+    <string name="tabsheet_workspace_named">Workspace “%1$s”</string>
+    <string name="tabsheet_name">Name</string>
+    <string name="tabsheet_rename">Rename</string>
+    <string name="tabsheet_renamed">Renamed</string>
+    <string name="tabsheet_color_icon">Color and icon</string>
+    <string name="tabsheet_agent_icon">The agent\'s icon</string>
+    <string name="tabsheet_close_tab">Close tab</string>
+    <!-- Order row "Tab  2 of 5  ↑ ↓"; in move_up/move_down %1$s is "Tab" or "Workspace “…”" -->
+    <string name="tabsheet_position">%1$d of %2$d</string>
+    <string name="tabsheet_move_up">Move %1$s up</string>
+    <string name="tabsheet_move_down">Move %1$s down</string>
+
+    <!-- ===== Settings ===== -->
+    <!-- Shared: page header, buttons -->
+    <string name="settings_back">Back</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_add">Add</string>
+    <string name="settings_apply">Apply</string>
+    <string name="settings_remove">Remove</string>
+    <string name="settings_remove_item">Remove %1$s</string>
+    <string name="settings_delete">Delete</string>
+    <string name="settings_allow">Allow</string>
+    <string name="settings_turn_off">Turn off</string>
+
+    <!-- Settings: overview -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_servers">Servers</string>
+    <string name="settings_ssh_keys">SSH keys</string>
+    <string name="settings_speech">Speech recognition</string>
+    <string name="settings_speech_engine_device">On device</string>
+    <string name="settings_speech_engine_service">Service</string>
+    <string name="settings_terminal">Terminal</string>
+    <string name="settings_term_view_normal">Normal</string>
+    <string name="settings_background">Background &amp; notifications</string>
+    <string name="settings_background_on">connected</string>
+    <string name="settings_background_off">off</string>
+    <string name="settings_agents">Agents</string>
+    <string name="settings_agent_symbol_auto">Icon: auto</string>
+    <string name="settings_agent_symbol_always">Icon: always</string>
+    <string name="settings_agent_symbol_never">No icon</string>
+
+    <!-- Settings: Appearance -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_mode">Mode</string>
+    <string name="settings_mode_system">System</string>
+    <string name="settings_mode_light">Light</string>
+    <string name="settings_mode_dark">Dark</string>
+    <string name="settings_accent">Accent color</string>
+    <string name="settings_accent_n">Accent color %1$d</string>
+
+    <!-- Settings: Quick keys -->
+    <string name="settings_quick_keys">Quick keys</string>
+    <string name="settings_bar_start">Home – waiting questions</string>
+    <string name="settings_quick_keys_hint">The app hides buttons that don\'t fit the current question – Voice and Keyboard for choice menus, the arrows for open questions.</string>
+    <string name="settings_height">Height</string>
+    <string name="settings_height_hint">Compact: 40 instead of 48 dp, for button bars and the text field. More lines for the terminal</string>
+    <string name="settings_height_normal">Normal</string>
+    <string name="settings_height_compact">Compact</string>
+
+    <!-- Settings: Input -->
+    <string name="settings_input">Input</string>
+    <string name="settings_hide_keyboard">Close keyboard after sending</string>
+    <string name="settings_hide_keyboard_hint">Also applies to Enter in the TUI. Off: the keyboard stays open for the next message</string>
+    <string name="settings_suggestions">Word suggestions and autocorrect</string>
+    <string name="settings_suggestions_hint">In the reply text field. The keyboard learns nothing from the text. What exactly it suggests is set in the keyboard itself</string>
+
+    <!-- Settings: Navigation -->
+    <string name="settings_navigation">Navigation</string>
+    <string name="settings_show_dock">Show dock</string>
+    <string name="settings_show_dock_hint">Off: ☰ at the top and in the terminal\'s button bar opens the menu</string>
+    <string name="settings_menu_button">Menu button</string>
+    <string name="settings_menu_button_hint">Side for ☰, also in the terminal\'s button bar</string>
+    <string name="settings_menu_left">Left</string>
+    <string name="settings_menu_right">Right</string>
+
+    <!-- Bar editor -->
+    <string name="settings_bar_detail_title">Terminal bar</string>
+    <string name="settings_bar_start_title">Waiting questions bar</string>
+    <string name="settings_bar_detail_count">%1$d of max. %2$d – all other keys via ⋯ in the bar</string>
+    <string name="settings_bar_start_count">%1$d of max. %2$d – all other keys in the terminal</string>
+    <string name="settings_move_up">Move up</string>
+    <string name="settings_move_down">Move down</string>
+    <string name="settings_restore_default">Restore default</string>
+
+    <!-- Servers -->
+    <string name="settings_server_passive">passive</string>
+    <string name="settings_server_add">Add server</string>
+
+    <!-- Server: edit -->
+    <string name="settings_server_new">New server</string>
+    <string name="settings_hostkey_unknown">Unknown host key</string>
+    <string name="settings_hostkey_compare">Compare the fingerprint with the server before you trust it.</string>
+    <string name="settings_hostkey_trust_connect">Trust and connect</string>
+    <string name="settings_hostkey_changed">WARNING: The host key has changed (%1$s). Only trust it if you know why.</string>
+    <string name="settings_connection">Connection</string>
+    <string name="settings_server_name">Name in the app</string>
+    <string name="settings_server_name_hint">e.g. build-server</string>
+    <string name="settings_server_host">Host</string>
+    <string name="settings_server_port">Port</string>
+    <string name="settings_server_user">User</string>
+    <string name="settings_server_user_hint">e.g. dev</string>
+    <string name="settings_server_session">herdr session (empty = default)</string>
+    <string name="settings_server_session_hint">Default</string>
+    <string name="settings_login">Authentication</string>
+    <string name="settings_auth_key">SSH key</string>
+    <string name="settings_auth_password">Password</string>
+    <string name="settings_manage_keys">Manage keys ›</string>
+    <string name="settings_no_key_yet">There is no SSH key on this phone yet. Create a new one or use one you already have.</string>
+    <string name="settings_key_to_server">For the server to accept the key, add its public part to ~/.ssh/authorized_keys there.</string>
+    <string name="settings_need_key">Create or import a key first</string>
+    <string name="settings_password_unchanged">unchanged</string>
+    <string name="settings_password_hint">Stored encrypted on the device. An SSH key is safer and more convenient.</string>
+    <string name="settings_behavior">Behavior</string>
+    <string name="settings_auto_connect">Connect when the app opens</string>
+    <string name="settings_auto_connect_hint">Off: passive, only when tapped</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_server_notify_hint">When an agent on this server is waiting or done, and when the connection drops</string>
+    <string name="settings_hostkey">Host key</string>
+    <string name="settings_hostkey_none">No host key trusted yet.</string>
+    <string name="settings_hostkey_revoke">Revoke trust</string>
+    <string name="settings_server_remove">Remove server</string>
+    <string name="settings_server_remove_title">Remove server “%1$s”?</string>
+    <string name="settings_server_remove_text">The app disconnects and forgets the server. Nothing changes on the server itself.</string>
+
+    <!-- Speech recognition -->
+    <string name="settings_speech_lang_de_ch">German (Switzerland)</string>
+    <string name="settings_speech_lang_de">German</string>
+    <string name="settings_speech_lang_en">English</string>
+    <string name="settings_speech_lang_fr">French</string>
+    <string name="settings_speech_lang_it">Italian</string>
+    <string name="settings_speech_lang_system">System language</string>
+    <string name="settings_speech_lang_de_ch_hint">%1$s · ß becomes ss</string>
+    <string name="settings_speech_recognition">Recognition</string>
+    <string name="settings_speech_device_hint">Android\'s recognition: fast, text appears while you speak. Audio stays on the phone</string>
+    <string name="settings_speech_device_unavailable">not available on this device</string>
+    <string name="settings_speech_service_hint">Installed service – depending on the provider, audio goes to its cloud</string>
+    <string name="settings_speech_whisper">Local Whisper</string>
+    <string name="settings_speech_whisper_model_hint">Model %1$s: more accurate, knows your words, text after you speak. Audio stays on the phone</string>
+    <string name="settings_speech_whisper_hint">Whisper model on the phone: more accurate, knows your words – choose a model below</string>
+    <string name="settings_speech_words">Words</string>
+    <string name="settings_speech_words_hint">Technical terms the recognition should expect (like initial_prompt in voxtype), separated by commas.</string>
+    <string name="settings_speech_words_saved">Words saved</string>
+    <string name="settings_speech_replacements">Replacements</string>
+    <string name="settings_speech_replacement_remove">Remove replacement</string>
+    <string name="settings_speech_recognized">Recognized</string>
+    <string name="settings_speech_recognized_hint">e.g. Herder</string>
+    <string name="settings_speech_replace_with">Replace with</string>
+    <string name="settings_speech_from_voxtype">Import from voxtype config (clipboard)</string>
+    <string name="settings_speech_voxtype_none">No voxtype entries found</string>
+    <!-- %1$s: settings_speech_words_count, %2$s: settings_speech_replacements_count -->
+    <string name="settings_speech_voxtype_imported">Imported %1$s and %2$s</string>
+    <plurals name="settings_speech_words_count">
+        <item quantity="one">%1$d word</item>
+        <item quantity="other">%1$d words</item>
+    </plurals>
+    <plurals name="settings_speech_replacements_count">
+        <item quantity="one">%1$d replacement</item>
+        <item quantity="other">%1$d replacements</item>
+    </plurals>
+    <string name="settings_speech_voxtype_copy_first">Copy ~/.config/voxtype/config.toml to the clipboard first</string>
+    <string name="settings_speech_postprocessing">Post-processing</string>
+    <string name="settings_speech_recording">Recording</string>
+    <string name="settings_speech_stop">Ends after a pause</string>
+    <string name="settings_speech_stop_hint">Or only with ✓, for long pauses. The Android recognizer may still stop earlier</string>
+    <string name="settings_speech_whisper_live">Text while speaking</string>
+    <string name="settings_speech_whisper_live_hint">Whisper recognizes each sentence at the short pause after it; the text shows a few seconds later</string>
+    <string name="settings_speech_auto_send">Send automatically after speaking</string>
+    <string name="settings_speech_auto_send_hint">Otherwise the text lands in the input field first</string>
+
+    <!-- Speech recognition: Whisper models -->
+    <string name="settings_whisper_models">Whisper models</string>
+    <string name="settings_whisper_imported">%1$s imported</string>
+    <string name="settings_whisper_downloading">downloading… %1$d%% of %2$s</string>
+    <string name="settings_whisper_error">Error: %1$s</string>
+    <string name="settings_whisper_cancel_download">Cancel download</string>
+    <string name="settings_whisper_delete_desc">Delete %1$s</string>
+    <string name="settings_whisper_download">Download</string>
+    <string name="settings_whisper_from_file">Import from file</string>
+    <string name="settings_whisper_from_file_hint">e.g. a model from voxtype (~/.local/share/voxtype/models)</string>
+    <string name="settings_whisper_note">Downloads only when you tap, directly from huggingface.co (ggerganov/whisper.cpp), no account needed. The app checks every file against its checksum. Recognition runs on the phone; the audio never leaves it. Words and replacements below also apply to Whisper.</string>
+    <string name="settings_whisper_delete_title">Delete %1$s?</string>
+    <string name="settings_whisper_delete_text">Frees %1$s. You can download it again later.</string>
+
+    <!-- Terminal -->
+    <string name="settings_font_smaller">Smaller text</string>
+    <string name="settings_font_larger">Larger text</string>
+    <string name="settings_view">View</string>
+    <string name="settings_term_normal_desc">Colored history, wrapped to the phone\'s width. The pane on the laptop stays as it is.</string>
+    <string name="settings_term_tui_desc">A real terminal, live: use vim, htop, menus and Claude directly. Swipe up and down to scroll. The keyboard button opens the text field; the terminal button in it sends every key straight to the pane.</string>
+    <string name="settings_term_tui_drawback">Drawback of the TUI</string>
+    <string name="settings_term_tui_drawback_desc">While it is open, the pane has the phone\'s size, on the laptop too: there it shrinks and its content rewraps. The pane only gets its size back when you leave the TUI or the app goes to the background.</string>
+    <string name="settings_term_linger">Keep open after swiping away</string>
+    <string name="settings_term_linger_off">Close immediately</string>
+    <string name="settings_term_linger_seconds">%1$d s</string>
+    <string name="settings_term_linger_minutes">%1$d min</string>
+    <string name="settings_term_linger_desc">How long a pane\'s TUI stays connected after you swipe away or leave the terminal. Longer: swiping back is live immediately. Shorter: the pane gets its size back on the laptop sooner, and less data flows. When the app goes to the background, the TUI closes immediately. Either way, the last frame stays visible until the connection is back.</string>
+    <string name="settings_font_size">Font size</string>
+    <string name="settings_color_scheme">Color scheme</string>
+    <string name="settings_scheme_auto">MissionCtrl (follows light/dark)</string>
+    <!-- Name of a copied scheme; %1$s is the original name -->
+    <string name="settings_scheme_own_name">%1$s (custom)</string>
+    <string name="settings_scheme_hint">Pick a template, or create your own scheme with the copy icon and adjust it. True colors that a program sets itself (e.g. Claude Code) stay unchanged.</string>
+    <string name="settings_scheme_edit">Edit %1$s</string>
+    <string name="settings_scheme_copy">Copy and adjust %1$s</string>
+
+    <!-- Terminal: scheme editor -->
+    <string name="settings_scheme_customize">Customize scheme</string>
+    <string name="settings_scheme_name">Name</string>
+    <string name="settings_scheme_background">Background</string>
+    <string name="settings_scheme_foreground">Foreground</string>
+    <string name="settings_scheme_delete">Delete scheme</string>
+    <string name="settings_scheme_delete_title">Delete “%1$s”?</string>
+    <string name="settings_scheme_delete_text">Your custom scheme will be removed.</string>
+
+    <!-- Background & notifications -->
+    <string name="settings_bg_stay_connected">Stay connected in the background</string>
+    <string name="settings_bg_stay_connected_hint">Keeps the connections open; Android requires a status notification for this</string>
+    <string name="settings_bg_status_hidden">Status notification is hidden</string>
+    <string name="settings_bg_hide_status">Hide status notification</string>
+    <string name="settings_bg_status_hidden_hint">The connection keeps running, notifications still arrive</string>
+    <string name="settings_bg_hide_status_hint">It\'s silent and collapsed. Turn it off in Android\'s settings to hide it; the connection stays.</string>
+    <string name="settings_notify_waiting">Agent is waiting for you</string>
+    <string name="settings_notify_waiting_hint">With the question; tapping opens the terminal</string>
+    <string name="settings_notify_done">Agent is done</string>
+    <string name="settings_notify_connection">Connection lost</string>
+    <string name="settings_notify_connection_hint">When a server can\'t be reached for more than a minute</string>
+    <string name="settings_notify_reply_hint">Reply right from the notification: for choice questions the first options appear as buttons, otherwise “Reply” opens a text field. The phone must be unlocked for this. Turn off notifications per server in the server settings, per workspace on the workspace page.</string>
+    <string name="settings_notify_not_allowed">Notifications aren\'t allowed</string>
+    <string name="settings_notify_not_allowed_hint">Without permission, Android shows neither the status notification nor agent notifications</string>
+    <string name="settings_battery">Battery</string>
+    <string name="settings_battery_off">Battery optimization is off</string>
+    <string name="settings_battery_turn_off">Turn off battery optimization</string>
+    <string name="settings_battery_hint">If the connection drops while the phone is idle: opens Android\'s list – pick MissionCtrl, then “Don\'t optimize”</string>
+    <string name="settings_bg_privacy_note">Everything stays on the device: the app keeps the SSH connections open itself, with no push service from Google. The lock screen only shows “An agent is waiting”, not the content. Samsung: if the connection still drops, also add the app under Battery › Background usage limits › “Never sleeping apps”.</string>
+
+    <!-- ===== Notifications, Whisper models, terminal schemes, key store ===== -->
+    <!-- Notifications (FleetService.kt): agent notifications; %1$s is the agent's name -->
+    <string name="fleetservice_agent_waiting">%1$s is waiting</string>
+    <string name="fleetservice_agent_done">%1$s is done</string>
+    <string name="fleetservice_agent_not_sent">%1$s – not sent</string>
+    <string name="fleetservice_public_waiting">An agent is waiting</string>
+    <string name="fleetservice_public_done">An agent is done</string>
+    <string name="fleetservice_reply_label">Reply to the agent</string>
+    <string name="fleetservice_reply">Reply</string>
+
+    <!-- Notifications (FleetService.kt): answering from a notification -->
+    <string name="fleetservice_question_closed">The question is no longer open.</string>
+    <string name="fleetservice_choice_closed">The choice is no longer open.</string>
+    <string name="fleetservice_no_answer">No answer.</string>
+
+    <!-- Notifications (FleetService.kt): channels in Android's settings -->
+    <string name="fleetservice_channel_status">Background connection</string>
+    <string name="fleetservice_channel_status_desc">Shows that MissionCtrl is connected in the background. Turning it off hides it; the connection and notifications stay.</string>
+    <string name="fleetservice_channel_waiting">Agent waiting</string>
+    <string name="fleetservice_channel_waiting_desc">An agent is waiting for your answer</string>
+    <string name="fleetservice_channel_done">Agent done</string>
+    <string name="fleetservice_channel_done_desc">An agent has finished its work</string>
+    <string name="fleetservice_channel_connection">Connection lost</string>
+    <string name="fleetservice_channel_connection_desc">A server has been unreachable for more than a minute</string>
+
+    <!-- Notifications (FleetService.kt): permanent status line, joined with " · " -->
+    <plurals name="fleetservice_status_waiting">
+        <item quantity="one">%1$d waiting</item>
+        <item quantity="other">%1$d waiting</item>
+    </plurals>
+    <plurals name="fleetservice_status_working">
+        <item quantity="one">%1$d working</item>
+        <item quantity="other">%1$d working</item>
+    </plurals>
+    <string name="fleetservice_status_quiet">All quiet</string>
+    <!-- %1$d servers online, %2$d servers in all (the quantity) -->
+    <plurals name="fleetservice_status_connected">
+        <item quantity="one">Connected to %1$d of %2$d server</item>
+        <item quantity="other">Connected to %1$d of %2$d servers</item>
+    </plurals>
+
+    <!-- Notifications (FleetService.kt): connection lost, SSH keys locked -->
+    <string name="fleetservice_lost_title">Lost connection to %1$s</string>
+    <string name="fleetservice_lost_text">You won\'t get notifications from this server until it\'s reachable again.</string>
+    <string name="fleetservice_auth_rejected">Login rejected</string>
+    <string name="fleetservice_unreachable">unreachable</string>
+    <string name="fleetservice_reconnect">Reconnect</string>
+    <string name="fleetservice_keys_locked_title">SSH keys locked</string>
+    <string name="fleetservice_keys_locked_text">Tap to unlock with fingerprint, face, or PIN. No notifications until then.</string>
+
+    <!-- Whisper models (Whisper.kt): label of a quantized file, %1$s is the technical name -->
+    <string name="whisper_label_compressed">%1$s (compressed)</string>
+    <!-- Whisper models (Whisper.kt): speed and accuracy on the phone -->
+    <string name="whisper_note_tiny">fastest, usually too inaccurate</string>
+    <string name="whisper_note_base">under 1 s, simple sentences</string>
+    <string name="whisper_note_small">more accurate than small (compressed), slower</string>
+    <string name="whisper_note_small_q5_1">about 1 s – fast, for everyday use</string>
+    <string name="whisper_note_medium_q5_0">more accurate than small, slower</string>
+    <string name="whisper_note_large_v3_turbo_q5_0">about 5 s – very accurate, almost like voxtype (recommended)</string>
+    <string name="whisper_note_large_v3_turbo">like voxtype on the desktop, slower and 1.6 GB</string>
+    <!-- Whisper models (Whisper.kt): download, import and load errors -->
+    <string name="whisper_error_checksum">Checksum doesn\'t match – file discarded</string>
+    <string name="whisper_error_unknown">Error</string>
+    <string name="whisper_error_not_stored">Couldn\'t store the file</string>
+    <string name="whisper_error_unreadable">Can\'t read the file</string>
+    <string name="whisper_error_unknown_model">Unknown model – only the models from the list work</string>
+    <string name="whisper_error_not_downloaded">Model isn\'t downloaded</string>
+
+    <!-- SSH keys (KeyVault.kt) -->
+    <string name="keyvault_device_key_name">This device</string>
+    <string name="keyvault_protection_missing">This key\'s protection is gone from the Android Keystore, so the key can\'t be opened. Import it again from an export, or create a new key and add it to your servers.</string>
+
+    <!-- Terminal (ui/Terminal.kt): built-in color schemes -->
+    <string name="terminal_scheme_mc_dark">MissionCtrl Dark</string>
+    <string name="terminal_scheme_mc_light">MissionCtrl Light</string>
+    <!-- Terminal (ui/Terminal.kt): the 16 ANSI colors -->
+    <string name="terminal_color_black">Black</string>
+    <string name="terminal_color_red">Red</string>
+    <string name="terminal_color_green">Green</string>
+    <string name="terminal_color_yellow">Yellow</string>
+    <string name="terminal_color_blue">Blue</string>
+    <string name="terminal_color_magenta">Magenta</string>
+    <string name="terminal_color_cyan">Cyan</string>
+    <string name="terminal_color_white">White</string>
+    <string name="terminal_color_bright_black">Bright black</string>
+    <string name="terminal_color_bright_red">Bright red</string>
+    <string name="terminal_color_bright_green">Bright green</string>
+    <string name="terminal_color_bright_yellow">Bright yellow</string>
+    <string name="terminal_color_bright_blue">Bright blue</string>
+    <string name="terminal_color_bright_magenta">Bright magenta</string>
+    <string name="terminal_color_bright_cyan">Bright cyan</string>
+    <string name="terminal_color_bright_white">Bright white</string>
+    <!-- Terminal (ui/Terminal.kt): font size -->
+    <string name="terminal_size_very_small">Very small</string>
+    <string name="terminal_size_small">Small</string>
+    <string name="terminal_size_normal">Normal</string>
+    <string name="terminal_size_large">Large</string>
+    <string name="terminal_size_very_large">Very large</string>
+
+    <!-- Symbols in the look picker, for screen readers (ui/AgentLooks.kt) -->
+    <string name="symbol_claude" translatable="false">Claude</string>
+    <string name="symbol_codex" translatable="false">Codex</string>
+    <string name="symbol_chart">Chart</string>
+    <string name="symbol_code">Code</string>
+    <string name="symbol_layers">Layers</string>
+    <string name="symbol_database">Database</string>
+    <string name="symbol_globe">Globe</string>
+    <string name="symbol_rocket">Rocket</string>
+    <string name="symbol_wrench">Wrench</string>
+
+    <!-- Settings › About, open-source licenses (ui/LicensesScreen.kt) -->
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_licenses_hint">MissionCtrl (GPL-3.0), libraries, fonts and speech models</string>
+    <string name="licenses_title">Open-source licenses</string>
+    <string name="licenses_intro">MissionCtrl itself and the open-source projects it is built on. Tap an entry to read its license.</string>
+    <string name="licenses_group_app">MissionCtrl</string>
+    <string name="licenses_app_notice">© 2026 Inscribe GmbH. MissionCtrl is free software: you can share and change it under the terms of the GNU General Public License, version 3 or (at your option) any later version. It comes with ABSOLUTELY NO WARRANTY. Tap to read the license.</string>
+    <string name="licenses_group_android">Android app</string>
+    <string name="licenses_group_core">Core (Rust)</string>
+    <string name="licenses_group_fonts">Fonts</string>
+    <string name="licenses_group_models">Speech models (downloaded on request)</string>
+    <string name="licenses_loading">Loading…</string>
+
+    <!-- Demo mode (DemoFleet.kt) and connecting note -->
+    <string name="demo_server">Demo</string>
+    <string name="demo_tab_translate">Translate</string>
+    <string name="demo_frontend_task">Make the cart page work offline</string>
+    <string name="demo_changelog_answer">The changelog for version 2.4 is ready: 12 entries, grouped by feature.</string>
+    <string name="demo_translate_answer">All help pages are translated into French. Anything else?</string>
+    <string name="demo_api_intro">The checkout endpoint and its tests are done. Before I wire it into the cart:</string>
+    <string name="demo_api_question">Which payment provider should the checkout use first?</string>
+    <string name="demo_option_stripe">Stripe (Recommended)</string>
+    <string name="demo_option_stripe_hint">Most common, good test mode</string>
+    <string name="demo_option_paypal">PayPal</string>
+    <string name="demo_option_both">Both, switchable in the settings</string>
+    <string name="demo_api_working">Wiring up the payment… (3s · esc to interrupt)</string>
+    <string name="demo_api_done">Done: the checkout now uses %1$s. All tests pass.</string>
+    <string name="demo_reply_working">Thinking… (2s · esc to interrupt)</string>
+    <string name="demo_reply">This is the demo, no agent is thinking here. On your own server, your agent would answer here.</string>
+    <string name="demo_shell_reply">Demo: no real shell. On your server, this command would run here.</string>
+    <string name="demo_not_possible">Not possible in the demo – add a server for that.</string>
+    <string name="demo_no_terminal">No live terminal in the demo.</string>
+    <string name="demo_banner">Demo: sample agents, no server</string>
+    <string name="demo_end">End demo</string>
+    <string name="demo_start">Try the demo</string>
+    <string name="settings_demo">Demo mode</string>
+    <string name="settings_demo_hint">Sample agents instead of your servers, e.g. for screenshots</string>
+    <string name="mission_connecting">Connecting…</string>
+    <string name="connection_key_locked">SSH key locked – tap to unlock</string>
+</resources>

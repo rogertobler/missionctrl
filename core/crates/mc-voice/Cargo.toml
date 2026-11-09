@@ -1,0 +1,11 @@
+[package]
+name = "mc-voice"
+description = "MissionCtrl speech recognition on the device (whisper.cpp)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+whisper-rs = "0.16"
+thiserror.workspace = true
