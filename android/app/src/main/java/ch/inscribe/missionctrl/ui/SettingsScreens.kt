@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -217,6 +218,15 @@ fun SettingsScreen(core: Core, nav: Nav) {
                 Divider()
                 RowItem(stringResource(R.string.licenses_title), stringResource(R.string.settings_licenses_hint), onClick = { nav.go(Screen.Licenses) }) {
                     McIcon(McIcons.Chevron, c.muted, 16.dp)
+                }
+                // Legal pages open in the browser, in the app's language (the URL is a string resource).
+                val uri = LocalUriHandler.current
+                listOf(R.string.settings_privacy to R.string.settings_privacy_url, R.string.settings_terms to R.string.settings_terms_url).forEach { (title, url) ->
+                    val link = stringResource(url)
+                    Divider()
+                    RowItem(stringResource(title), onClick = { runCatching { uri.openUri(link) } }) {
+                        McIcon(McIcons.Open, c.muted, 16.dp)
+                    }
                 }
             }
         }

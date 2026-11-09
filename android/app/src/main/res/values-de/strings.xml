@@ -767,6 +767,10 @@
     <string name="settings_about">Über die App</string>
     <string name="settings_version">Version</string>
     <string name="settings_licenses_hint">MissionCtrl (GPL-3.0), Bibliotheken, Schriften und Sprachmodelle</string>
+    <string name="settings_privacy">Datenschutzerklärung</string>
+    <string name="settings_terms">Nutzungsbedingungen</string>
+    <string name="settings_privacy_url">https://inscribe.ch/apps/missionctrl/datenschutz/</string>
+    <string name="settings_terms_url">https://inscribe.ch/apps/missionctrl/nutzungsbedingungen/</string>
     <string name="licenses_title">Open-Source-Lizenzen</string>
     <string name="licenses_intro">MissionCtrl selbst und die Open-Source-Projekte, auf denen es aufbaut. Ein Tipp auf einen Eintrag zeigt seine Lizenz.</string>
     <string name="licenses_group_app">MissionCtrl</string>

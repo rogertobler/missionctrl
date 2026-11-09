@@ -801,6 +801,11 @@
     <string name="settings_about">About</string>
     <string name="settings_version">Version</string>
     <string name="settings_licenses_hint">MissionCtrl (GPL-3.0), libraries, fonts and speech models</string>
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_terms">Terms of use</string>
+    <!-- Opened in the browser. The pages exist in English and German only: other languages keep these English URLs. -->
+    <string name="settings_privacy_url">https://inscribe.ch/en/apps/missionctrl/privacy/</string>
+    <string name="settings_terms_url">https://inscribe.ch/en/apps/missionctrl/terms/</string>
     <string name="licenses_title">Open-source licenses</string>
     <string name="licenses_intro">MissionCtrl itself and the open-source projects it is built on. Tap an entry to read its license.</string>
     <string name="licenses_group_app">MissionCtrl</string>
