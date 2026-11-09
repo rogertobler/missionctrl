@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.gradle.api.tasks.Exec
 
 plugins {
@@ -20,6 +21,22 @@ val appLocales: List<String> = listOf("en") + file("src/main/res").listFiles().o
     }
     .sorted()
 
+// Release signing: a properties file outside the repository (storeFile, storePassword, keyAlias),
+// named in local.properties as `signing.properties=/path/to/signing.properties`. `-PsigningKey=…`
+// picks another key from the same store (e.g. the upload key for Google Play). Without the file
+// the release build stays unsigned.
+val signing: Properties? = run {
+    val local = rootProject.file("local.properties").takeIf { it.exists() } ?: return@run null
+    val path = Properties().apply { local.inputStream().use { load(it) } }
+        .getProperty("signing.properties") ?: return@run null
+    val file = File(path)
+    if (!file.exists()) {
+        logger.warn("Release signing: $path not found, the release build stays unsigned.")
+        return@run null
+    }
+    Properties().apply { file.inputStream().use { load(it) } }
+}
+
 android {
     namespace = "ch.inscribe.missionctrl"
     compileSdk = 37
@@ -34,9 +51,19 @@ android {
         buildConfigField("String", "APP_LOCALES", "\"${appLocales.joinToString(",")}\"")
     }
 
+    signingConfigs {
+        if (signing != null) create("release") {
+            storeFile = File(signing.getProperty("storeFile"))
+            storePassword = signing.getProperty("storePassword")
+            keyAlias = (findProperty("signingKey") as String?) ?: signing.getProperty("keyAlias")
+            keyPassword = signing.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
