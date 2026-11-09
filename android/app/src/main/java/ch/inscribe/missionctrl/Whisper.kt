@@ -87,6 +87,8 @@ class WhisperStore(private val context: Context) {
                     instanceFollowRedirects = true
                     connectTimeout = 15_000
                     readTimeout = 30_000
+                    // Android's default names the device model and system version; the download needs neither.
+                    setRequestProperty("User-Agent", "MissionCtrl")
                     if (done > 0) setRequestProperty("Range", "bytes=$done-")
                 }
                 try {
