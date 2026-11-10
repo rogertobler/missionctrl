@@ -16,14 +16,22 @@ In development. The platform-independent core (Rust) connects to several herdr s
 keeps their state live and reconnects by itself after a dropped connection. The Android app
 (Kotlin, Jetpack Compose) uses the core through UniFFI:
 
-- answer waiting agents right away: tap a menu option, type or dictate
-- read the coloured history, or use a pane as a real terminal (TUI)
-- a key bar with every key and Ctrl/Alt/Shift to combine
-- paste images and upload files
+- one list with the workspaces, tabs and panes of several servers, and the state of each agent:
+  working, done or waiting
+- answer a waiting agent: tap a menu option, type or dictate
+- read a pane's coloured history, or use the pane as a real terminal (TUI)
+- a key bar for what a phone keyboard lacks (arrows, Esc, Tab, Shift+Tab, Home/End, PgUp/PgDn,
+  Del and more), with Ctrl, Alt and Shift to combine
+- paste images and upload files to the server (stored in `~/.cache/missionctrl/uploads/`)
 - create, move and close tabs and workspaces
-- notifications in the background, without a push service
-- several servers and SSH keys
-- dictation with on-device recognition or a local Whisper model (whisper.cpp)
+- notifications when an agent is waiting or done, or when a connection drops; with the app
+  closed too if you let it stay connected in the background. No push service is involved, and
+  you can answer from the notification
+- dictation with a local Whisper model (whisper.cpp) or Android's on-device recognition
+  (Android 12 and later, where the device offers it); the audio stays on the phone
+- several servers and SSH keys: create an Ed25519 key in the app or import one (OpenSSH, PEM,
+  PuTTY), or log in with a password. Private keys are encrypted with the Android Keystore, with
+  optional fingerprint, face or device PIN on top
 - a demo mode with sample agents, to try the app without a server
 
 An iOS app (SwiftUI) will follow.
@@ -95,7 +103,7 @@ huggingface.co when you tap to download it. App data is excluded from Android ba
 Drive, device transfer). The keyboard does not learn from answers, and the fonts ship with the
 app.
 
-Speech recognition: "On device" and Whisper keep the audio on the phone. If you choose another
+Speech recognition: "On device" (Android 12 and later, where available) and Whisper keep the audio on the phone. If you choose another
 installed recognition service, its privacy terms apply; some send the audio to their provider.
 The app points this out when you choose one.
 
