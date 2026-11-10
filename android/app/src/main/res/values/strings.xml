@@ -592,7 +592,7 @@
     <string name="settings_speech_whisper_model_hint">Model %1$s: more accurate, knows your words, text after you speak. Audio stays on the phone</string>
     <string name="settings_speech_whisper_hint">Whisper model on the phone: more accurate, knows your words – choose a model below</string>
     <string name="settings_speech_words">Words</string>
-    <string name="settings_speech_words_hint">Technical terms the recognition should expect (like initial_prompt in voxtype), separated by commas.</string>
+    <string name="settings_speech_words_hint">Technical terms the recognition should expect, separated by commas.</string>
     <string name="settings_speech_words_saved">Words saved</string>
     <string name="settings_speech_replacements">Replacements</string>
     <string name="settings_speech_replacement_remove">Remove replacement</string>
@@ -630,7 +630,7 @@
     <string name="settings_whisper_delete_desc">Delete %1$s</string>
     <string name="settings_whisper_download">Download</string>
     <string name="settings_whisper_from_file">Import from file</string>
-    <string name="settings_whisper_from_file_hint">e.g. a model from voxtype (~/.local/share/voxtype/models)</string>
+    <string name="settings_whisper_from_file_hint">A ggml model file from whisper.cpp, e.g. ggml-small-q5_1.bin. It must match one of the models listed here (checksum).</string>
     <string name="settings_whisper_note">Downloads only when you tap, directly from huggingface.co (ggerganov/whisper.cpp), no account needed. The app checks every file against its checksum. Recognition runs on the phone; the audio never leaves it. Words and replacements below also apply to Whisper.</string>
     <string name="settings_whisper_delete_title">Delete %1$s?</string>
     <string name="settings_whisper_delete_text">Frees %1$s. You can download it again later.</string>
@@ -740,13 +740,13 @@
     <!-- Whisper models (Whisper.kt): label of a quantized file, %1$s is the technical name -->
     <string name="whisper_label_compressed">%1$s (compressed)</string>
     <!-- Whisper models (Whisper.kt): speed and accuracy on the phone -->
-    <string name="whisper_note_tiny">fastest, usually too inaccurate</string>
-    <string name="whisper_note_base">under 1 s, simple sentences</string>
+    <string name="whisper_note_tiny">fastest, but usually too inaccurate</string>
+    <string name="whisper_note_base">under 1 s – enough for simple sentences</string>
     <string name="whisper_note_small">more accurate than small (compressed), slower</string>
-    <string name="whisper_note_small_q5_1">about 1 s – fast, for everyday use</string>
+    <string name="whisper_note_small_q5_1">about 1 s – fast, good for everyday use</string>
     <string name="whisper_note_medium_q5_0">more accurate than small, slower</string>
-    <string name="whisper_note_large_v3_turbo_q5_0">about 5 s – very accurate, almost like voxtype (recommended)</string>
-    <string name="whisper_note_large_v3_turbo">like voxtype on the desktop, slower and 1.6 GB</string>
+    <string name="whisper_note_large_v3_turbo_q5_0">about 5 s – very accurate (recommended)</string>
+    <string name="whisper_note_large_v3_turbo">most accurate, but slower and a big download</string>
     <!-- Whisper models (Whisper.kt): download, import and load errors -->
     <string name="whisper_error_checksum">Checksum doesn\'t match – file discarded</string>
     <string name="whisper_error_unknown">Error</string>

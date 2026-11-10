@@ -556,7 +556,7 @@
     <string name="settings_speech_whisper_model_hint">Modell %1$s: genauer, kennt deine Wörter, Text nach dem Sprechen. Ton bleibt auf dem Handy</string>
     <string name="settings_speech_whisper_hint">Whisper-Modell auf dem Handy: genauer, kennt deine Wörter – Modell unten wählen</string>
     <string name="settings_speech_words">Wörter</string>
-    <string name="settings_speech_words_hint">Fachbegriffe, die die Erkennung erwarten soll (wie initial_prompt bei voxtype), mit Komma getrennt.</string>
+    <string name="settings_speech_words_hint">Fachbegriffe, die die Erkennung erwarten soll, mit Komma getrennt.</string>
     <string name="settings_speech_words_saved">Wörter gespeichert</string>
     <string name="settings_speech_replacements">Ersetzungen</string>
     <string name="settings_speech_replacement_remove">Ersetzung entfernen</string>
@@ -594,7 +594,7 @@
     <string name="settings_whisper_delete_desc">%1$s löschen</string>
     <string name="settings_whisper_download">Herunterladen</string>
     <string name="settings_whisper_from_file">Aus Datei importieren</string>
-    <string name="settings_whisper_from_file_hint">z. B. ein Modell von voxtype (~/.local/share/voxtype/models)</string>
+    <string name="settings_whisper_from_file_hint">Eine ggml-Modelldatei von whisper.cpp, z. B. ggml-small-q5_1.bin. Sie muss einem der Modelle hier entsprechen (Prüfsumme).</string>
     <string name="settings_whisper_note">Herunterladen nur auf Antippen, direkt von huggingface.co (ggerganov/whisper.cpp), ohne Konto. Die App prüft jede Datei mit ihrer Prüfsumme. Erkannt wird auf dem Handy, der Ton verlässt es nicht. Wörter und Ersetzungen unten gelten auch für Whisper.</string>
     <string name="settings_whisper_delete_title">%1$s löschen?</string>
     <string name="settings_whisper_delete_text">Gibt %1$s frei. Du kannst es später wieder herunterladen.</string>
@@ -704,13 +704,13 @@
     <!-- Whisper-Modelle (Whisper.kt): Name einer komprimierten Datei, %1$s ist der technische Name -->
     <string name="whisper_label_compressed">%1$s (komprimiert)</string>
     <!-- Whisper-Modelle (Whisper.kt): Tempo und Genauigkeit auf dem Telefon -->
-    <string name="whisper_note_tiny">am schnellsten, meist zu ungenau</string>
-    <string name="whisper_note_base">unter 1 s, einfache Sätze</string>
+    <string name="whisper_note_tiny">am schnellsten, aber meist zu ungenau</string>
+    <string name="whisper_note_base">unter 1 s – reicht für einfache Sätze</string>
     <string name="whisper_note_small">genauer als small (komprimiert), langsamer</string>
-    <string name="whisper_note_small_q5_1">rund 1 s – schnell, für den Alltag</string>
+    <string name="whisper_note_small_q5_1">rund 1 s – schnell, gut für den Alltag</string>
     <string name="whisper_note_medium_q5_0">genauer als small, langsamer</string>
-    <string name="whisper_note_large_v3_turbo_q5_0">rund 5 s – sehr genau, fast wie voxtype (empfohlen)</string>
-    <string name="whisper_note_large_v3_turbo">wie voxtype am Desktop, langsamer und 1.6 GB</string>
+    <string name="whisper_note_large_v3_turbo_q5_0">rund 5 s – sehr genau (empfohlen)</string>
+    <string name="whisper_note_large_v3_turbo">am genauesten, aber langsamer und gross</string>
     <!-- Whisper-Modelle (Whisper.kt): Fehler beim Laden, Importieren und Öffnen -->
     <string name="whisper_error_checksum">Prüfsumme stimmt nicht – Datei verworfen</string>
     <string name="whisper_error_unknown">Fehler</string>
