@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a concrete change or addition to the app
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the suggestion. This form is for concrete requests that can be built as described. For open-ended ideas, questions and general feedback, please use [Discussions](https://github.com/rogertobler/missionctrl/discussions).
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like, and which problem does it solve?
+      description: Describe what you are trying to do and where the app gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: usage
+    attributes:
+      label: How do you use MissionCtrl today?
+      description: Your setup helps to judge an idea, for example how many servers, which agents, which devices.
+    validations:
+      required: false
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else?
+      description: Sketches, screenshots or examples from other apps. Please remove host names, user names and other private data.
+    validations:
+      required: false

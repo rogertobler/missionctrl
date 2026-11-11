@@ -1,0 +1,96 @@
+name: Bug report
+description: Something in the app breaks or behaves differently than it should
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report this. The more of the fields below you can fill in, the easier the problem is to find.
+
+        Please do not report security problems here. See [SECURITY.md](https://github.com/rogertobler/missionctrl/blob/main/SECURITY.md) for how to report them privately.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem in a few sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do before it happened? Does it happen every time?
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. ...
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: false
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: In the app under Settings › About.
+      placeholder: e.g. 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: Install source
+      options:
+        - GitHub APK
+        - Google Play
+        - Built from source
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: e.g. Pixel 9, Galaxy Z Fold 6
+    validations:
+      required: true
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      placeholder: e.g. Android 15
+    validations:
+      required: true
+  - type: input
+    id: herdr-version
+    attributes:
+      label: herdr version
+      description: Run `herdr --version` on the server.
+    validations:
+      required: false
+  - type: dropdown
+    id: agent
+    attributes:
+      label: What runs in the pane?
+      description: Choose all that apply.
+      multiple: true
+      options:
+        - Claude Code
+        - Codex
+        - Other agent
+        - Plain shell
+        - Not relevant
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots-logs
+    attributes:
+      label: Screenshots or logs
+      description: |
+        Drag images into this field or paste text. Before you post, please remove host names, user names, keys and any other private data. Issues are public.
+    validations:
+      required: false

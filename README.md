@@ -107,11 +107,14 @@ with sample agents.
 
 ## Feedback
 
-This is the first public release, so your feedback is especially welcome. If something breaks,
-if you have an idea, or if you just want to share how it works for you (which agents you run,
-on which device), please open an issue on
-[GitHub Issues](https://github.com/rogertobler/missionctrl/issues). For security problems,
-please see [SECURITY.md](SECURITY.md) instead.
+This is the first public release, so your feedback is especially welcome.
+
+- **Bugs and concrete feature requests:**
+  [GitHub Issues](https://github.com/rogertobler/missionctrl/issues)
+- **Questions, ideas and experiences** (how it works for you, which agents you run, on which
+  device): [GitHub Discussions](https://github.com/rogertobler/missionctrl/discussions)
+
+For security problems, please see [SECURITY.md](SECURITY.md) instead.
 
 ## Privacy
 
