@@ -40,7 +40,8 @@ phone, on several servers at once. The panes may run AI agents or plain shells: 
 your agents are doing, answer when one of them needs you, and work in any pane as a real terminal.
 
 All a server needs is a running herdr and SSH access. The app talks to herdr's Unix sockets
-directly over SSH; nothing is installed on the server.
+directly over SSH; nothing is installed on the server. It works with the herdr TUI, the classic
+terminal app with its own server.
 
 MissionCtrl is an independent project. It is not made, maintained or endorsed by the herdr
 project; "herdr" here only names the software the app works with.
