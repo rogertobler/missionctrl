@@ -9,11 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://play.google.com/store/apps/details?id=ch.inscribe.missionctrl"><img src=".github/google-play-badge.png" height="80" alt="Get it on Google Play"></a>
+  <a href="https://github.com/rogertobler/missionctrl/releases/latest"><img src="https://img.shields.io/github/v/release/rogertobler/missionctrl?label=Download%20APK&style=for-the-badge" alt="Download the APK from GitHub Releases"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/rogertobler/missionctrl/releases/latest"><img src="https://img.shields.io/github/v/release/rogertobler/missionctrl?label=Download%20APK" alt="Download the APK from GitHub Releases"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-GPL--3.0--or--later-blue" alt="Licence: GPL-3.0-or-later"></a>
 </p>
 
@@ -73,13 +72,14 @@ Android first; an iOS app (SwiftUI) will follow.
 
 ## Install
 
-| | |
-|---|---|
-| **[Google Play](https://play.google.com/store/apps/details?id=ch.inscribe.missionctrl)** | Costs a little. Buying it supports further development. |
-| **[APK from GitHub Releases](https://github.com/rogertobler/missionctrl/releases/latest)** | Free; the GPL allows it. |
+**[Download the APK from GitHub Releases](https://github.com/rogertobler/missionctrl/releases/latest)**
+and open it on your phone. It is free; the GPL allows it.
 
-Both contain the same code and are signed with the same key, so you can switch between them
-without reinstalling. To check an APK, compare the SHA-256 fingerprint of its signing certificate:
+A Google Play version is coming soon. It will cost a little, and buying it supports further
+development. Both contain the same code and are signed with the same key, so you can switch
+between them without reinstalling.
+
+To check an APK, compare the SHA-256 fingerprint of its signing certificate:
 
 ```bash
 apksigner verify --print-certs missionctrl.apk
@@ -104,6 +104,14 @@ Requirements:
 
 No server at hand? Tap "Try the demo", or turn on "Demo mode" in the settings, to try the app
 with sample agents.
+
+## Feedback
+
+This is the first public release, so your feedback is especially welcome. If something breaks,
+if you have an idea, or if you just want to share how it works for you (which agents you run,
+on which device), please open an issue on
+[GitHub Issues](https://github.com/rogertobler/missionctrl/issues). For security problems,
+please see [SECURITY.md](SECURITY.md) instead.
 
 ## Privacy
 
@@ -206,8 +214,9 @@ IBM Plex Sans and IBM Plex Mono are licensed under the SIL Open Font License 1.1
 version 3 or (at your option) any later version (`GPL-3.0-or-later`). The full text is in
 [LICENSE](LICENSE).
 
-The versions in the app stores (Google Play, later the App Store) are published by Inscribe GmbH.
-They cost a little but contain the same code; buying them supports further development.
+The versions in the app stores (Google Play soon, later the App Store) are published by
+Inscribe GmbH. They cost a little but contain the same code; buying them supports further
+development.
 
 ## Contributing
 
@@ -216,5 +225,3 @@ Bug reports, ideas and pull requests are welcome. Contributions are subject to t
 use them in the store versions.
 
 To report a security problem, please see [SECURITY.md](SECURITY.md) instead of opening an issue.
-
-Google Play and the Google Play logo are trademarks of Google LLC.
