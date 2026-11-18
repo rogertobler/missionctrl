@@ -1216,7 +1216,7 @@ dependencies = [
 
 [[package]]
 name = "mc-cli"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1229,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "mc-core"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "base64",
  "getrandom 0.4.3",
@@ -1245,7 +1245,7 @@ dependencies = [
 
 [[package]]
 name = "mc-ffi"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "android_logger",
  "log",
@@ -1259,7 +1259,7 @@ dependencies = [
 
 [[package]]
 name = "mc-voice"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "thiserror",
  "whisper-rs",
@@ -2443,7 +2443,7 @@ dependencies = [
 
 [[package]]
 name = "uniffi-bindgen"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "uniffi",
 ]
