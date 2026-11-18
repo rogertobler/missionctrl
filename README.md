@@ -5,11 +5,12 @@
 <h1 align="center">MissionCtrl for herdr</h1>
 
 <p align="center">
-  Manage your herdr sessions on the go: answer AI agents and work in any shell.
+  For the herdr TUI and herdr-core: answer AI agents and work in any shell, on the go.
 </p>
 
 <p align="center">
   <a href="https://github.com/rogertobler/missionctrl/releases/latest"><img src="https://img.shields.io/github/v/release/rogertobler/missionctrl?label=Download%20APK&style=for-the-badge" alt="Download the APK from GitHub Releases"></a>
+  <a href="https://play.google.com/store/apps/details?id=ch.inscribe.missionctrl"><img src="https://img.shields.io/badge/Get%20it%20on-Google%20Play-34A853?style=for-the-badge&logo=googleplay&logoColor=white" alt="Get MissionCtrl on Google Play"></a>
 </p>
 
 <p align="center">
@@ -36,12 +37,13 @@
 </p>
 
 MissionCtrl lets you manage your [herdr](https://github.com/herdrdev/herdr) sessions from your
-phone, on several servers at once. The panes may run AI agents or plain shells: you see what
-your agents are doing, answer when one of them needs you, and work in any pane as a real terminal.
+phone, on several servers at once. It works with both kinds of herdr: the herdr TUI, the classic
+herdr in the terminal, and herdr-core, the server behind the Herdr app on the desktop. The panes
+may run AI agents or plain shells: you see what your agents are doing, answer when one of them
+needs you, and work in any pane as a real terminal.
 
-All a server needs is a running herdr and SSH access. The app talks to herdr's Unix sockets
-directly over SSH; nothing is installed on the server. It works with the herdr TUI, the classic
-terminal app with its own server.
+All a server needs is herdr itself, either the herdr TUI or herdr-core, and SSH access. The app
+talks to herdr directly over SSH; nothing is installed on the server.
 
 MissionCtrl is an independent project. It is not made, maintained or endorsed by the herdr
 project; "herdr" here only names the software the app works with.
@@ -56,7 +58,9 @@ project; "herdr" here only names the software the app works with.
 - **A key bar** for what a phone keyboard lacks (arrows, Esc, Tab, Shift+Tab, Home/End,
   PgUp/PgDn, Del and more), with Ctrl, Alt and Shift to combine
 - **Images and files:** paste images and upload files to the server
-- **Tabs and workspaces:** create, move and close them
+- **Tabs and workspaces:** create, rename, move and close them
+- **herdr TUI and herdr-core:** when you add a server, the app finds out which of the two it
+  runs; more under [herdr TUI and herdr-core](#herdr-tui-and-herdr-core)
 - **Notifications** when an agent is waiting or done, or when a connection drops; with the app
   closed too if you let it stay connected in the background. No push service is involved, and
   you can answer from the notification
@@ -76,9 +80,10 @@ Android first; an iOS app (SwiftUI) will follow.
 **[Download the APK from GitHub Releases](https://github.com/rogertobler/missionctrl/releases/latest)**
 and open it on your phone. It is free; the GPL allows it.
 
-A Google Play version is coming soon. It will cost a little, and buying it supports further
-development. Both contain the same code and are signed with the same key, so you can switch
-between them without reinstalling.
+MissionCtrl is also on
+**[Google Play](https://play.google.com/store/apps/details?id=ch.inscribe.missionctrl)**. There it
+costs a little, and buying it supports further development. Both contain the same code and are
+signed with the same key, so you can switch between them without reinstalling.
 
 To check an APK, compare the SHA-256 fingerprint of its signing certificate:
 
@@ -92,7 +97,7 @@ Signer #1 certificate SHA-256 digest: 1b23eb879d416965e6912d24df38b5e6a9c0c8815b
 
 Requirements:
 
-- your own server with herdr and SSH access
+- your own server with the herdr TUI or herdr-core, and SSH access
 - Android 10 or later, 64-bit (arm64)
 
 ## Getting started
@@ -101,14 +106,34 @@ Requirements:
 2. Create a new SSH key (Ed25519) in the app, or import one you already have. Password login
    works too.
 3. For a new key, the app shows its public part. Add it to `~/.ssh/authorized_keys` on the server.
-4. Connect and confirm the server's host key. Your workspaces, tabs and panes appear in the list.
+4. Connect and confirm the server's host key. The app finds out by itself whether the server runs
+   the herdr TUI or herdr-core. Your workspaces, tabs and panes appear in the list.
 
 No server at hand? Tap "Try the demo", or turn on "Demo mode" in the settings, to try the app
 with sample agents.
 
-## Feedback
+## herdr TUI and herdr-core
 
-This is the first public release, so your feedback is especially welcome.
+When you add a server, the app finds out by itself whether it runs the herdr TUI or herdr-core.
+You can also choose the type yourself in the server's settings ("Type": Auto, herdr TUI or
+herdr-core). If a server runs both, you pick one or add both as two entries; each has its own
+agents. The app starts herdr-core only for a server saved with the type "herdr-core". If
+herdr-core is installed but not running when you add a server, the app saves it with that type
+by itself and starts herdr-core when it connects. A server saved as "Auto" or "herdr TUI" is
+never started this way, even if herdr-core stops later.
+
+On herdr-core, a few things differ from the herdr TUI:
+
+- **Workspaces and tabs** come from the Herdr app on the desktop, and at first the app only shows
+  them. To create, rename, move and close them from the phone, turn on "Edit layout" for that
+  server (off by default). Your changes appear in the Herdr app, and changes made there appear
+  in MissionCtrl. Before the app changes anything, it saves a copy of the layout on the server.
+- **Agent states:** an agent shows a state (working, done or waiting) only if it reports one
+  itself.
+
+Answering an agent and the live terminal work the same on both.
+
+## Feedback
 
 - **Bugs and concrete feature requests:**
   [GitHub Issues](https://github.com/rogertobler/missionctrl/issues)
@@ -161,7 +186,7 @@ Pasted images and uploaded files are stored on the server under `~/.cache/missio
 
 ```text
 core/                     Rust core (Cargo workspace)
-  crates/mc-core/         SSH, herdr socket API, one runtime per server, several servers together
+  crates/mc-core/         SSH, the herdr TUI and herdr-core APIs, one runtime per server, several servers together
   crates/mc-cli/          developer tool `mc` to test against real servers
   crates/mc-ffi/          UniFFI interface for Kotlin (and later Swift)
   crates/mc-voice/        speech recognition on the device with whisper.cpp
@@ -218,9 +243,9 @@ IBM Plex Sans and IBM Plex Mono are licensed under the SIL Open Font License 1.1
 version 3 or (at your option) any later version (`GPL-3.0-or-later`). The full text is in
 [LICENSE](LICENSE).
 
-The versions in the app stores (Google Play soon, later the App Store) are published by
-Inscribe GmbH. They cost a little but contain the same code; buying them supports further
-development.
+The version on [Google Play](https://play.google.com/store/apps/details?id=ch.inscribe.missionctrl),
+and later the one on the App Store, is published by Inscribe GmbH. It costs a little but
+contains the same code; buying it supports further development.
 
 ## Contributing
 
