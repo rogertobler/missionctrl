@@ -75,6 +75,10 @@ android {
     // Android 13+ lists the languages from values-xx/ under the app's settings (res/resources.properties).
     androidResources { generateLocaleConfig = true }
 
+    // No dependency metadata block in the APK or bundle: it is encrypted with a Google key and
+    // readable only by Google Play, and it would make the APK differ from a plain source build.
+    dependenciesInfo { includeInApk = false; includeInBundle = false }
+
     // Every language in every install: the language is chosen in the app, after installing.
     bundle { language { enableSplit = false } }
 
