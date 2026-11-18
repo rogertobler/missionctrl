@@ -71,7 +71,43 @@ data class SavedServer(
     val autoConnect: Boolean = true,
     /** Notifications for this server's agents and its connection. */
     val notify: Boolean = true,
-)
+    /** Which herdr to connect to: [BACKEND_AUTO], [BACKEND_TUI] or [BACKEND_CORE]. */
+    val backend: String = BACKEND_AUTO,
+    /** herdr-core socket path, or null for the default. Only with a fixed [backend]. */
+    val socketPath: String? = null,
+    /** herdr-core only: the app may change the Herdr app's shared layout (spaces and tabs). */
+    val editLayout: Boolean = false,
+) {
+    fun toJson(): JSONObject = JSONObject()
+        .put("id", id).put("name", name).put("host", host)
+        .put("port", port).put("user", user).put("session", session ?: "")
+        .put("key_id", keyId ?: "").put("auto_connect", autoConnect).put("notify", notify)
+        .put("backend", backend).put("socket", socketPath ?: "")
+        .put("edit_layout", editLayout)
+
+    companion object {
+        const val BACKEND_AUTO = "auto"
+        const val BACKEND_TUI = "tui"
+        const val BACKEND_CORE = "core"
+
+        /** Reads [toJson]; entries from older builds lack the key id, backend and socket. */
+        fun fromJson(j: JSONObject) = SavedServer(
+            id = j.getString("id"),
+            name = j.getString("name"),
+            host = j.getString("host"),
+            port = j.getInt("port"),
+            user = j.getString("user"),
+            session = j.optString("session").ifEmpty { null },
+            // Servers from the first build used the single device key.
+            keyId = if (j.has("key_id")) j.optString("key_id").ifEmpty { null } else KeyVault.DEVICE_KEY_ID,
+            autoConnect = j.optBoolean("auto_connect", true),
+            notify = j.optBoolean("notify", true),
+            backend = j.optString("backend").ifEmpty { BACKEND_AUTO },
+            socketPath = j.optString("socket").ifEmpty { null },
+            editLayout = j.optBoolean("edit_layout", false),
+        )
+    }
+}
 
 /**
  * App settings: servers, trusted host keys, looks and view preferences.
@@ -92,6 +128,8 @@ class Settings(context: Context) {
     var hideKeyboardAfterSend by bool("hide_keyboard_after_send", true)
     var keyboardSuggestions by bool("keyboard_suggestions", false)
     var compactKeys by bool("compact_keys", false)
+    /** The pinch hint of a desktop-sized live terminal was shown once. */
+    var pinchHintSeen by bool("pinch_hint_seen", false)
     /** 0 = system, 1 = light, 2 = dark */
     var themeMode by int("theme_mode", 0)
     var accent by long("accent", 0xFF00E28A)
@@ -112,30 +150,9 @@ class Settings(context: Context) {
 
     // -- Servers ------------------------------------------------------------------------
 
-    fun servers(): List<SavedServer> = objects("servers").map {
-        SavedServer(
-            id = it.getString("id"),
-            name = it.getString("name"),
-            host = it.getString("host"),
-            port = it.getInt("port"),
-            user = it.getString("user"),
-            session = it.optString("session").ifEmpty { null },
-            // Servers from the first build used the single device key.
-            keyId = if (it.has("key_id")) it.optString("key_id").ifEmpty { null } else KeyVault.DEVICE_KEY_ID,
-            autoConnect = it.optBoolean("auto_connect", true),
-            notify = it.optBoolean("notify", true),
-        )
-    }
+    fun servers(): List<SavedServer> = objects("servers").map(SavedServer::fromJson)
 
-    fun saveServers(servers: List<SavedServer>) = putObjects(
-        "servers",
-        servers.map {
-            JSONObject()
-                .put("id", it.id).put("name", it.name).put("host", it.host)
-                .put("port", it.port).put("user", it.user).put("session", it.session ?: "")
-                .put("key_id", it.keyId ?: "").put("auto_connect", it.autoConnect).put("notify", it.notify)
-        },
-    )
+    fun saveServers(servers: List<SavedServer>) = putObjects("servers", servers.map { it.toJson() })
 
     // -- Host keys ----------------------------------------------------------------------
 
@@ -374,4 +391,7 @@ fun SavedServer.toConfig(password: String?): ServerConfig = ServerConfig(
     user = user,
     session = session,
     auth = if (keyId != null) ServerAuth.Key(keyId) else ServerAuth.Password(password ?: ""),
+    backend = backend,
+    socketPath = socketPath?.takeIf { it.isNotBlank() && backend != SavedServer.BACKEND_AUTO },
+    editLayout = editLayout && backend != SavedServer.BACKEND_TUI,
 )

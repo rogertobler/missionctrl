@@ -9,6 +9,9 @@ use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex};
 
+use mc_core::hc::CoreClient;
+use mc_core::hc::layout::Anchor;
+use mc_core::hc::write::{self as layout_write, LayoutState, NewTab, Start, Target};
 use mc_core::herdr::HerdrClient;
 use mc_core::herdr::model::{AgentStatus, PaneRead};
 use mc_core::keys::{
@@ -19,7 +22,9 @@ use mc_core::terminal::{
     Color as TermColorCore, Ended, Screen, ScrollDirection, TerminalSession, TerminalSink,
 };
 use mc_core::transport::{SshAuth, SshTarget, SshTransport, Transport, Zeroizing};
-use mc_core::{ConnectionState, Connector, ErrorInfo, Fleet, FleetView, HostProfile};
+use mc_core::{
+    Backend, ConnectionState, Connector, ErrorInfo, Fleet, FleetView, HostProfile, ServerClient,
+};
 
 uniffi::setup_scaffolding!();
 
@@ -39,6 +44,30 @@ pub enum McError {
     /// The directory for a new workspace or tab does not exist on the server.
     #[error("no such directory: {path}")]
     NoSuchDirectory { path: String },
+    /// The server's host key is not trusted yet: show it, and after the user
+    /// trusts it ([`MissionCtrl::trust_host_key`]) try again.
+    #[error("unknown host key for {host}:{port}")]
+    HostKeyUnknown {
+        host: String,
+        port: u16,
+        fingerprint: String,
+        openssh: String,
+    },
+    /// The server's host key differs from the trusted one.
+    #[error("host key changed for {host}:{port}")]
+    HostKeyChanged {
+        host: String,
+        port: u16,
+        fingerprint: String,
+    },
+    #[error("authentication failed for user {user}")]
+    AuthFailed { user: String },
+    /// A workspace or tab change on herdr-core did not (fully) happen.
+    /// `problem`: one of `LayoutProblem::as_str` (unreadable, conflict,
+    /// partial, child_elsewhere, other_machine, unclear, gone, busy,
+    /// unplaced, backup, too_large, placed, claimed); `detail` for logs.
+    #[error("layout {problem}: {detail}")]
+    Layout { problem: String, detail: String },
 }
 
 impl From<mc_core::Error> for McError {
@@ -47,6 +76,31 @@ impl From<mc_core::Error> for McError {
             mc_core::Error::NotConnected => McError::NotConnected,
             mc_core::Error::Timeout => McError::Timeout,
             mc_core::Error::NoSuchDirectory { path } => McError::NoSuchDirectory { path },
+            mc_core::Error::HostKeyUnknown {
+                host,
+                port,
+                fingerprint,
+                openssh,
+            } => McError::HostKeyUnknown {
+                host,
+                port,
+                fingerprint,
+                openssh,
+            },
+            mc_core::Error::HostKeyChanged {
+                host,
+                port,
+                fingerprint,
+            } => McError::HostKeyChanged {
+                host,
+                port,
+                fingerprint,
+            },
+            mc_core::Error::AuthFailed { user } => McError::AuthFailed { user },
+            mc_core::Error::Layout { problem, detail } => McError::Layout {
+                problem: problem.as_str().to_owned(),
+                detail,
+            },
             e => McError::Failed {
                 reason: e.to_string(),
             },
@@ -62,6 +116,11 @@ impl From<ImportError> for McError {
             ImportError::Invalid(reason) => McError::Failed { reason },
         }
     }
+}
+
+/// A saved backend name; unknown or missing means automatic detection.
+fn backend_of(name: Option<&str>) -> Backend {
+    name.and_then(Backend::parse).unwrap_or_default()
 }
 
 fn failed(reason: impl Into<String>) -> McError {
@@ -155,6 +214,18 @@ pub struct ServerConfig {
     /// Named herdr session, or `None` for the default session.
     pub session: Option<String>,
     pub auth: ServerAuth,
+    /// Which herdr server to use: "auto" (default), "tui" or "core".
+    #[uniffi(default)]
+    pub backend: Option<String>,
+    /// Absolute path of the server's socket when it is not where herdr or
+    /// herdr-core put it by default; `None` finds it.
+    #[uniffi(default)]
+    pub socket_path: Option<String>,
+    /// herdr-core only: workspaces and tabs may be created, renamed, moved
+    /// and closed (they live in the Herdr app's layout, which MissionCtrl
+    /// then writes). Off: those actions fail with `NotSupported`.
+    #[uniffi(default)]
+    pub edit_layout: Option<bool>,
 }
 
 /// How a server authenticates.
@@ -185,6 +256,10 @@ pub enum Connection {
         attempt: u32,
         error: String,
         retry_in_ms: u64,
+        /// No herdr server answered where the profile looks (none running,
+        /// or herdr-core not installed), as opposed to one that failed.
+        #[uniffi(default)]
+        absent: bool,
     },
     /// First contact: the user must confirm the fingerprint.
     HostKeyUnknown {
@@ -202,6 +277,11 @@ pub enum Connection {
     /// The server rejected the client key.
     AuthFailed {
         user: String,
+    },
+    /// The server needs a newer MissionCtrl (a newer herdr-core generation).
+    /// No automatic retry.
+    Incompatible {
+        what: String,
     },
     Failed {
         message: String,
@@ -230,6 +310,20 @@ impl From<AgentStatus> for Status {
     }
 }
 
+/// A herdr server found on a machine ([`MissionCtrl::detect_backends`]).
+#[derive(uniffi::Record, Clone, Debug, PartialEq, Eq)]
+pub struct DetectedBackend {
+    /// "tui" or "core".
+    pub backend: String,
+    /// It answers now; false: herdr-core installed, not running (a profile
+    /// set to "core" starts it), or `unclear`.
+    pub running: bool,
+    /// The probe gave no clear answer (timeout, broken connection): this
+    /// herdr may or may not be there. Never save on such a result.
+    #[uniffi(default)]
+    pub unclear: bool,
+}
+
 #[derive(uniffi::Record, Clone)]
 pub struct ServerRow {
     pub id: String,
@@ -240,6 +334,13 @@ pub struct ServerRow {
     pub stale: bool,
     pub workspaces: u32,
     pub panes: u32,
+    /// The server this connection talks to: "tui" or "core"; `None` until connected.
+    #[uniffi(default)]
+    pub backend: Option<String>,
+    /// Every herdr server that answered at the last connect ("tui", "core").
+    /// Both with backend "auto": the app may ask which one to use.
+    #[uniffi(default)]
+    pub available_backends: Vec<String>,
 }
 
 #[derive(uniffi::Record, Clone)]
@@ -357,10 +458,12 @@ fn connection(state: &ConnectionState) -> Connection {
             attempt,
             error,
             retry_in_ms,
+            absent,
         } => Connection::Reconnecting {
             attempt: *attempt,
             error: error.clone(),
             retry_in_ms: *retry_in_ms,
+            absent: *absent,
         },
         ConnectionState::ActionRequired { error } => match error {
             ErrorInfo::HostKeyUnknown {
@@ -384,6 +487,7 @@ fn connection(state: &ConnectionState) -> Connection {
                 fingerprint: fingerprint.clone(),
             },
             ErrorInfo::AuthFailed { user } => Connection::AuthFailed { user: user.clone() },
+            ErrorInfo::Incompatible { what } => Connection::Incompatible { what: what.clone() },
             ErrorInfo::Other { message } => Connection::Failed {
                 message: message.clone(),
             },
@@ -404,6 +508,12 @@ fn fleet_state(view: &FleetView) -> FleetState {
             stale: h.stale,
             workspaces: h.snapshot.as_ref().map_or(0, |s| s.workspaces.len() as u32),
             panes: h.snapshot.as_ref().map_or(0, |s| s.panes.len() as u32),
+            backend: h.backend.map(|b| b.as_str().to_owned()),
+            available_backends: h
+                .available_backends
+                .iter()
+                .map(|b| b.as_str().to_owned())
+                .collect(),
         })
         .collect();
 
@@ -516,12 +626,17 @@ impl Keys {
     }
 }
 
+/// A herdr-core client with the layout state that serializes its writes.
+type CoreLayout = (Arc<CoreClient>, Arc<LayoutState>);
+
 #[derive(uniffi::Object)]
 pub struct MissionCtrl {
     runtime: tokio::runtime::Runtime,
     fleet: Fleet,
     trust: Arc<TrustStore>,
     keys: Arc<Mutex<Keys>>,
+    /// Opens transports, also for checks outside the fleet.
+    connector: Connector,
 }
 
 #[uniffi::export]
@@ -562,7 +677,7 @@ impl MissionCtrl {
 
         let fleet = {
             let _guard = runtime.enter();
-            Fleet::new(connector)
+            Fleet::new(connector.clone())
         };
         let mut updates = fleet.subscribe();
         runtime.spawn(async move {
@@ -582,6 +697,7 @@ impl MissionCtrl {
             fleet,
             trust,
             keys,
+            connector,
         }))
     }
 
@@ -656,8 +772,78 @@ impl MissionCtrl {
             port: config.port,
             user: config.user,
             session: config.session,
-            socket_path: None,
+            socket_path: config.socket_path.filter(|p| !p.trim().is_empty()),
+            backend: backend_of(config.backend.as_deref()),
+            edit_layout: config.edit_layout == Some(true),
         });
+    }
+
+    /// Which herdr servers a server has: "tui", "core", both (TUI first) or
+    /// none. "core" also when herdr-core is installed but not running
+    /// (`running` false): only a profile set to "core" starts it, "auto"
+    /// never does. The form must ask before saving such a server as "core"
+    /// (saving it starts a core the user may not want, e.g. while their TUI
+    /// is only down for a moment). For the
+    /// add-server form, before the server is added; nothing is started. An
+    /// untrusted host key fails with [`McError::HostKeyUnknown`] /
+    /// [`McError::HostKeyChanged`], like a connection.
+    pub async fn detect_backends(
+        &self,
+        config: ServerConfig,
+    ) -> Result<Vec<DetectedBackend>, McError> {
+        // The probe's credentials go in under an id of their own and come out
+        // again before anything is awaited: the connector reads them when it
+        // is called. The servers' own entries are never touched, so a
+        // concurrent add, a second probe or a cancelled one cannot mix them up.
+        static PROBES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let probe_id = format!(
+            "detect:{}",
+            PROBES.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
+        let profile = HostProfile {
+            id: probe_id.clone(),
+            name: config.name,
+            host: config.host,
+            port: config.port,
+            user: config.user,
+            session: config.session,
+            socket_path: config.socket_path.filter(|p| !p.trim().is_empty()),
+            backend: Backend::Auto,
+            edit_layout: false,
+        };
+        let transport = {
+            let mut keys = self.keys.lock().expect("key store lock");
+            keys.servers.insert(probe_id.clone(), config.auth);
+            drop(keys);
+            let transport = (self.connector)(profile.clone());
+            self.keys
+                .lock()
+                .expect("key store lock")
+                .servers
+                .remove(&probe_id);
+            transport
+        };
+        let found = self
+            .run(async move {
+                let transport = Arc::new(transport.await?);
+                let found = mc_core::detect_backends(
+                    &transport,
+                    profile.session.as_deref(),
+                    profile.socket_path.as_deref(),
+                )
+                .await;
+                transport.close().await;
+                Ok(found)
+            })
+            .await?;
+        Ok(found
+            .into_iter()
+            .map(|d| DetectedBackend {
+                backend: d.backend.as_str().to_owned(),
+                running: d.running,
+                unclear: d.unclear,
+            })
+            .collect())
     }
 
     pub fn remove_server(&self, id: String) {
@@ -674,6 +860,15 @@ impl MissionCtrl {
     pub fn retry(&self, id: String) {
         if let Ok(host) = self.fleet.host(&id) {
             host.retry();
+        }
+    }
+
+    /// Close a server's connection and connect anew, choosing its backend
+    /// again: for "auto" the herdr TUI comes first, so this switches back to
+    /// it when it runs again. [`Self::retry`] only re-syncs a live connection.
+    pub fn reconnect(&self, id: String) {
+        if let Ok(host) = self.fleet.host(&id) {
+            host.reconnect();
         }
     }
 
@@ -705,7 +900,7 @@ impl MissionCtrl {
         lines: u32,
         ansi: bool,
     ) -> Result<PaneText, McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         let read = self
             .run(async move { client.read_pane_as(&pane_id, lines, ansi).await })
             .await?;
@@ -720,7 +915,7 @@ impl MissionCtrl {
         pane_id: String,
         ansi: bool,
     ) -> Result<PaneText, McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         let read = self
             .run(async move { client.read_visible(&pane_id, ansi).await })
             .await?;
@@ -735,7 +930,7 @@ impl MissionCtrl {
         text: String,
         enter: bool,
     ) -> Result<(), McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         self.run(async move {
             if enter {
                 client.send_line(&pane_id, &text).await
@@ -753,12 +948,45 @@ impl MissionCtrl {
         pane_id: String,
         keys: Vec<String>,
     ) -> Result<(), McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         self.run(async move {
             let keys: Vec<&str> = keys.iter().map(String::as_str).collect();
             client.send_keys(&pane_id, &keys).await
         })
         .await
+    }
+
+    /// The pane is on screen now with the app in front: a look starts, also
+    /// while the server is not connected (its turns are then marked once it
+    /// is). Synchronous, so it is ordered with [`Self::forget_seen`].
+    pub fn show_seen(&self, server_id: String, pane_id: String) {
+        if let Ok(host) = self.fleet.host(&server_id) {
+            host.show_seen(&pane_id);
+        }
+    }
+
+    /// The user has looked at this pane's latest result. On herdr-core this
+    /// clears "done" for every client (shared label `herdr.seen`); on the herdr
+    /// TUI, which tracks it itself, it does nothing. Only within a look
+    /// started with [`Self::show_seen`]: after the pane left the screen it
+    /// does nothing.
+    pub async fn mark_seen(&self, server_id: String, pane_id: String) -> Result<(), McError> {
+        let Some(generation) = self.fleet.host(&server_id)?.seen_look(&pane_id) else {
+            return Ok(());
+        };
+        let client = self.server(&server_id)?;
+        // herdr-core's `labels` event brings the new state; the herdr TUI has
+        // nothing to mark.
+        self.run(async move { client.mark_look(&pane_id, generation).await })
+            .await
+    }
+
+    /// The pane left the screen (another page, the app in the background):
+    /// on herdr-core the next look marks its turn seen again.
+    pub fn forget_seen(&self, server_id: String, pane_id: String) {
+        if let Ok(host) = self.fleet.host(&server_id) {
+            host.forget_seen(&pane_id);
+        }
     }
 
     pub async fn rename_workspace(
@@ -767,6 +995,14 @@ impl MissionCtrl {
         workspace_id: String,
         label: String,
     ) -> Result<(), McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            self.run(async move {
+                layout_write::rename_space(&core, &state, &workspace_id, &label).await
+            })
+            .await?;
+            self.refresh(&server_id);
+            return Ok(());
+        }
         let client = self.client(&server_id)?;
         self.run(async move { client.rename_workspace(&workspace_id, &label).await })
             .await
@@ -778,6 +1014,12 @@ impl MissionCtrl {
         tab_id: String,
         label: String,
     ) -> Result<(), McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            self.run(async move { layout_write::rename_tab(&core, &state, &tab_id, &label).await })
+                .await?;
+            self.refresh(&server_id);
+            return Ok(());
+        }
         let client = self.client(&server_id)?;
         self.run(async move { client.rename_tab(&tab_id, &label).await })
             .await
@@ -789,7 +1031,7 @@ impl MissionCtrl {
         server_id: String,
         dirs: Vec<String>,
     ) -> Result<DirReport, McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         let report = self
             .run(async move { client.transport().dir_info(&dirs).await })
             .await?;
@@ -809,7 +1051,7 @@ impl MissionCtrl {
 
     /// A plan an agent wrote, from the path on its screen (`~/.claude…/plans/<name>.md`).
     pub async fn read_plan(&self, server_id: String, path: String) -> Result<String, McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         self.run(async move { client.transport().read_plan(&path).await })
             .await
     }
@@ -822,7 +1064,7 @@ impl MissionCtrl {
         file_name: String,
         data: Vec<u8>,
     ) -> Result<String, McError> {
-        let client = self.client(&server_id)?;
+        let client = self.server(&server_id)?;
         self.run(async move { client.transport().upload(&file_name, &data).await })
             .await
     }
@@ -837,6 +1079,24 @@ impl MissionCtrl {
         cwd: Option<String>,
         start: TabStart,
     ) -> Result<String, McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            let tab_name = nonempty(&label)
+                .map(str::to_owned)
+                .or_else(|| start_label(&start))
+                .unwrap_or_default();
+            return self
+                .core_create(
+                    &server_id,
+                    core,
+                    state,
+                    Some(workspace_id),
+                    String::new(),
+                    tab_name,
+                    cwd,
+                    start,
+                )
+                .await;
+        }
         let client = self.client(&server_id)?;
         let pane = self
             .run(async move {
@@ -867,6 +1127,15 @@ impl MissionCtrl {
         cwd: Option<String>,
         start: TabStart,
     ) -> Result<String, McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            let space_name = nonempty(&label).map(str::to_owned).unwrap_or_default();
+            let tab_name = start_label(&start).unwrap_or_default();
+            return self
+                .core_create(
+                    &server_id, core, state, None, space_name, tab_name, cwd, start,
+                )
+                .await;
+        }
         let client = self.client(&server_id)?;
         let pane = self
             .run(async move {
@@ -891,12 +1160,23 @@ impl MissionCtrl {
     }
 
     /// Move a tab to `index` (0-based) within its workspace, on the server.
+    /// herdr-core takes `before_id` instead: the tab it goes before in the
+    /// list as shown (`None`: to the end), so a change made elsewhere
+    /// meanwhile does not shift the target.
     pub async fn move_tab(
         &self,
         server_id: String,
         tab_id: String,
         index: u32,
+        before_id: Option<String>,
     ) -> Result<(), McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            let anchor = anchor_of(before_id);
+            self.run(async move { layout_write::move_tab(&core, &state, &tab_id, &anchor).await })
+                .await?;
+            self.refresh(&server_id);
+            return Ok(());
+        }
         let client = self.client(&server_id)?;
         self.run(async move { client.move_tab(&tab_id, index).await })
             .await?;
@@ -904,13 +1184,24 @@ impl MissionCtrl {
         Ok(())
     }
 
-    /// Move a workspace to `index` (0-based) in the list, on the server.
+    /// Move a workspace to `index` (0-based) in the list, on the server
+    /// (herdr-core: before `before_id`, as for [`Self::move_tab`]).
     pub async fn move_workspace(
         &self,
         server_id: String,
         workspace_id: String,
         index: u32,
+        before_id: Option<String>,
     ) -> Result<(), McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            let anchor = anchor_of(before_id);
+            self.run(async move {
+                layout_write::move_space(&core, &state, &workspace_id, &anchor).await
+            })
+            .await?;
+            self.refresh(&server_id);
+            return Ok(());
+        }
         let client = self.client(&server_id)?;
         self.run(async move { client.move_workspace(&workspace_id, index).await })
             .await?;
@@ -919,6 +1210,13 @@ impl MissionCtrl {
     }
 
     pub async fn close_tab(&self, server_id: String, tab_id: String) -> Result<(), McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            let result = self
+                .run(async move { layout_write::close(&core, &state, Target::Tab(&tab_id)).await })
+                .await;
+            self.refresh(&server_id);
+            return result;
+        }
         let client = self.client(&server_id)?;
         self.run(async move { client.close_tab(&tab_id).await })
             .await?;
@@ -931,11 +1229,33 @@ impl MissionCtrl {
         server_id: String,
         workspace_id: String,
     ) -> Result<(), McError> {
+        if let Some((core, state)) = self.core_layout(&server_id)? {
+            let result = self
+                .run(async move {
+                    layout_write::close(&core, &state, Target::Space(&workspace_id)).await
+                })
+                .await;
+            self.refresh(&server_id);
+            return result;
+        }
         let client = self.client(&server_id)?;
         self.run(async move { client.close_workspace(&workspace_id).await })
             .await?;
         self.refresh(&server_id);
         Ok(())
+    }
+
+    /// herdr-core: end a terminal that stands in no workspace (the
+    /// "Terminals" group). Needs layout editing like the other changes.
+    pub async fn close_terminal(&self, server_id: String, pane_id: String) -> Result<(), McError> {
+        let Some((core, state)) = self.core_layout(&server_id)? else {
+            return Err(failed("only herdr-core has loose terminals"));
+        };
+        let result = self
+            .run(async move { layout_write::close_terminal(&core, &state, &pane_id).await })
+            .await;
+        self.refresh(&server_id);
+        result
     }
 
     /// Control `pane_id` as a live terminal of `cols × rows` (TUI mode).
@@ -949,21 +1269,27 @@ impl MissionCtrl {
         rows: u16,
         observer: Arc<dyn PaneTerminalObserver>,
     ) -> Result<Arc<PaneTerminal>, McError> {
-        let client = self.client(&server_id)?;
         let sink = Arc::new(TerminalForwarder(observer));
-        let session = self
-            .run(async move {
-                TerminalSession::open(
-                    client.transport(),
-                    client.socket_path(),
-                    &pane_id,
-                    cols,
-                    rows,
-                    sink,
-                )
-                .await
-            })
-            .await?;
+        // Unlike other calls, an opening the app gave up on stops: it would
+        // take the terminal's size only to let go of it again. The observer
+        // then hears an end all the same, so the app can wait for every
+        // opening it started to be over before it opens the next one. The
+        // guard exists before anything can fail and moves into the task, so
+        // the end is also heard when the task is dropped before its first poll.
+        let mut ends = EndIfUnopened(Some(sink.clone()));
+        let client = self.server(&server_id)?;
+        let work = self.runtime.spawn(async move {
+            let opened = client.open_terminal(&pane_id, cols, rows, sink).await;
+            if opened.is_ok() {
+                // An open session reports its own end.
+                ends.disarm();
+            }
+            opened
+        });
+        let session = AbortOnDrop(work)
+            .await
+            .map_err(|e| failed(e.to_string()))?
+            .map_err(McError::from)?;
         Ok(Arc::new(PaneTerminal { session }))
     }
 
@@ -1016,6 +1342,26 @@ pub struct TermScreen {
     pub cursor_col: u16,
     pub cursor_visible: bool,
     pub seq: u64,
+    /// herdr-core: the app only watches (the desktop's size); the next input
+    /// takes the terminal over. Always false on the herdr TUI.
+    #[uniffi(default)]
+    pub watching: bool,
+    /// The program asked for application cursor keys (DECCKM).
+    #[uniffi(default)]
+    pub app_cursor: bool,
+    /// herdr-core: a named key is on its way to herdr; input after it waits.
+    #[uniffi(default)]
+    pub keys_pending: bool,
+    /// herdr-core: counts named keys herdr refused (one more per failure).
+    #[uniffi(default)]
+    pub key_errors: u64,
+    /// herdr-core: why the last named key was refused.
+    #[uniffi(default)]
+    pub key_error: Option<String>,
+    /// herdr-core: counts the times typed input was refused because too much
+    /// was still waiting to go out (one more per refusal).
+    #[uniffi(default)]
+    pub input_refused: u64,
 }
 
 impl From<Screen> for TermScreen {
@@ -1048,6 +1394,12 @@ impl From<Screen> for TermScreen {
             cursor_col: s.cursor_col,
             cursor_visible: s.cursor_visible,
             seq: s.seq,
+            watching: s.watching,
+            app_cursor: s.app_cursor,
+            keys_pending: s.keys_pending,
+            key_errors: s.key_errors,
+            key_error: s.key_error,
+            input_refused: s.input_refused,
         }
     }
 }
@@ -1063,6 +1415,44 @@ pub trait PaneTerminalObserver: Send + Sync {
 }
 
 struct TerminalForwarder(Arc<dyn PaneTerminalObserver>);
+
+/// Tells the observer its opening is over when dropped before the session
+/// opened (failed, or aborted because the app gave up on it).
+struct EndIfUnopened(Option<Arc<TerminalForwarder>>);
+
+impl EndIfUnopened {
+    fn disarm(&mut self) {
+        self.0 = None;
+    }
+}
+
+impl Drop for EndIfUnopened {
+    fn drop(&mut self) {
+        if let Some(sink) = self.0.take() {
+            sink.ended(Ended::Released);
+        }
+    }
+}
+
+/// A task that is aborted when the call waiting for it is dropped.
+struct AbortOnDrop<T>(tokio::task::JoinHandle<T>);
+
+impl<T> std::future::Future for AbortOnDrop<T> {
+    type Output = Result<T, tokio::task::JoinError>;
+
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        std::pin::Pin::new(&mut self.0).poll(cx)
+    }
+}
+
+impl<T> Drop for AbortOnDrop<T> {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
 
 impl TerminalSink for TerminalForwarder {
     fn screen(&self, screen: Screen) {
@@ -1095,6 +1485,13 @@ impl PaneTerminal {
         self.session.input(bytes);
     }
 
+    /// Key names without fixed bytes (`ctrl+enter`, `esc` …), encoded by
+    /// herdr-core for the program's keyboard mode after the input before
+    /// them. herdr-core only; the TUI backend drops them.
+    pub fn keys(&self, names: Vec<String>) {
+        self.session.keys(names);
+    }
+
     pub fn resize(&self, cols: u16, rows: u16) {
         self.session.resize(cols, rows);
     }
@@ -1114,6 +1511,14 @@ impl PaneTerminal {
     /// Named `release` because Kotlin objects already have `close()`.
     pub fn release(&self) {
         self.session.release();
+    }
+}
+
+/// Where a herdr-core move goes: before `before_id`, or to the end.
+fn anchor_of(before_id: Option<String>) -> Anchor {
+    match before_id.filter(|id| !id.is_empty()) {
+        Some(id) => Anchor::Before(id),
+        None => Anchor::End,
     }
 }
 
@@ -1171,8 +1576,74 @@ impl MissionCtrl {
             .map_err(McError::from)
     }
 
+    /// For a herdr-core server: its client and layout state ([`CoreLayout`]), when layout
+    /// editing is on (else an error before anything happens). `None` for a
+    /// herdr TUI server.
+    fn core_layout(&self, server_id: &str) -> Result<Option<CoreLayout>, McError> {
+        let host = self.fleet.host(server_id)?;
+        let core = match host.server()? {
+            ServerClient::Tui(_) => return Ok(None),
+            ServerClient::Core(core) => core,
+        };
+        // The core refuses too; checking here fails before anything is read.
+        let layout = host.layout();
+        if !layout.allowed() {
+            return Err(McError::from(mc_core::Error::Unsupported {
+                backend: "herdr-core".into(),
+                what: "changing the layout (turn on layout editing for this server)".into(),
+            }));
+        }
+        Ok(Some((core, layout)))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn core_create(
+        &self,
+        server_id: &str,
+        core: Arc<CoreClient>,
+        state: Arc<LayoutState>,
+        space: Option<String>,
+        space_name: String,
+        tab_name: String,
+        cwd: Option<String>,
+        start: TabStart,
+    ) -> Result<String, McError> {
+        let created = self
+            .run(async move {
+                let cwd = core
+                    .transport()
+                    .resolve_dir(cwd.as_deref().unwrap_or(""))
+                    .await?;
+                let start = match start {
+                    TabStart::Shell => Start::Shell,
+                    TabStart::Agent { kind } => Start::Program(vec![kind]),
+                    TabStart::Command { command } => Start::Line(command),
+                };
+                layout_write::create(
+                    &core,
+                    &state,
+                    NewTab {
+                        space,
+                        space_name,
+                        tab_name,
+                        cwd,
+                        start,
+                        size: layout_write::DEFAULT_SIZE,
+                    },
+                )
+                .await
+            })
+            .await;
+        self.refresh(server_id);
+        Ok(created?.address)
+    }
+
     fn client(&self, server_id: &str) -> Result<Arc<HerdrClient>, McError> {
         Ok(self.fleet.host(server_id)?.client()?)
+    }
+
+    fn server(&self, server_id: &str) -> Result<ServerClient, McError> {
+        Ok(self.fleet.host(server_id)?.server()?)
     }
 }
 
@@ -1212,6 +1683,29 @@ impl SpeechModel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn errors_the_server_form_handles_stay_apart() {
+        let unknown = McError::from(mc_core::Error::HostKeyUnknown {
+            host: "example.com".into(),
+            port: 22,
+            fingerprint: "SHA256:abc".into(),
+            openssh: "ssh-ed25519 AAAA".into(),
+        });
+        assert!(matches!(unknown, McError::HostKeyUnknown { port: 22, .. }));
+        let changed = McError::from(mc_core::Error::HostKeyChanged {
+            host: "example.com".into(),
+            port: 22,
+            fingerprint: "SHA256:def".into(),
+        });
+        assert!(matches!(changed, McError::HostKeyChanged { .. }));
+        let auth = McError::from(mc_core::Error::AuthFailed { user: "dev".into() });
+        assert!(matches!(auth, McError::AuthFailed { .. }));
+        assert!(matches!(
+            McError::from(mc_core::Error::Timeout),
+            McError::Timeout
+        ));
+    }
 
     #[test]
     fn unnamed_tab_is_named_after_what_runs_in_it() {

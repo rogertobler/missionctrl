@@ -17,3 +17,6 @@ getrandom = { version = "0.4", features = ["sys_rng"] }
 zeroize = "1"
 vt100 = "0.16"
 base64 = "0.22"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

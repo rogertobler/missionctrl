@@ -97,7 +97,7 @@ impl HerdrClient {
                 socket_candidates(&env, session)
             }
         };
-        let mut last_error = None;
+        let mut errors = Vec::new();
         for socket in candidates {
             let client = Self {
                 transport: transport.clone(),
@@ -108,11 +108,14 @@ impl HerdrClient {
                 Ok(pong) => return Ok((client, pong)),
                 Err(e) => {
                     tracing::debug!(socket = %client.socket, error = %e, "herdr socket candidate failed");
-                    last_error = Some(e);
+                    errors.push(e);
                 }
             }
         }
-        Err(last_error.unwrap_or_else(|| Error::Protocol("no socket candidates".into())))
+        // A candidate that hung or answered oddly says more than a missing
+        // default path after it.
+        Err(crate::error::telling(errors)
+            .unwrap_or_else(|| Error::Protocol("no socket candidates".into())))
     }
 
     pub fn socket_path(&self) -> &str {
@@ -475,7 +478,10 @@ async fn write_request(
 /// Read one line into `buf` and return it without the newline; at the end of
 /// the stream the rest, or `None`. Cancel-safe: bytes read so far stay in
 /// `buf` and the next call continues the line.
-async fn read_line(stream: &mut BufReader<BoxStream>, buf: &mut Vec<u8>) -> Result<Option<String>> {
+pub(crate) async fn read_line(
+    stream: &mut BufReader<BoxStream>,
+    buf: &mut Vec<u8>,
+) -> Result<Option<String>> {
     let limit = (MAX_LINE_BYTES + 1).saturating_sub(buf.len()) as u64;
     (&mut *stream).take(limit).read_until(b'\n', buf).await?;
     if buf.last() == Some(&b'\n') {
@@ -608,6 +614,7 @@ mod tests {
         let env = RemoteEnv {
             home: "/home/u".into(),
             xdg_config_home: Some("/cfg/".into()),
+            ..Default::default()
         };
         assert_eq!(
             socket_candidates(&env, None),
@@ -615,7 +622,7 @@ mod tests {
         );
         let env = RemoteEnv {
             home: "/home/u".into(),
-            xdg_config_home: None,
+            ..Default::default()
         };
         assert_eq!(
             socket_candidates(&env, Some("work")),

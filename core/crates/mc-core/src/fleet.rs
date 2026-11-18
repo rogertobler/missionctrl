@@ -73,10 +73,22 @@ impl Fleet {
 
     /// Add a host and start connecting. Replaces a host with the same id.
     pub fn add_host(&self, profile: HostProfile) -> HostHandle {
-        let handle = HostHandle::spawn(
+        // The same machine again (settings saved): its layout state goes on,
+        // so a start still in flight on the old handle keeps blocking a
+        // second one and is looked for through the new connection.
+        let layout = self
+            .inner
+            .lock()
+            .expect("fleet lock")
+            .hosts
+            .get(&profile.id)
+            .filter(|old| same_machine(&old.view().profile, &profile))
+            .map(HostHandle::layout);
+        let handle = HostHandle::spawn_with(
             profile.clone(),
             self.connector.clone(),
             self.changed.clone(),
+            layout,
         );
         let mut inner = self.inner.lock().expect("fleet lock");
         if let Some(old) = inner.hosts.insert(profile.id.clone(), handle.clone()) {
@@ -206,6 +218,12 @@ fn build_view(hosts: Vec<HostView>) -> FleetView {
     }
 }
 
+/// Whether two profiles reach the same herdr-core: same SSH endpoint, user
+/// and socket.
+fn same_machine(a: &HostProfile, b: &HostProfile) -> bool {
+    a.host == b.host && a.port == b.port && a.user == b.user && a.socket_path == b.socket_path
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,10 +248,14 @@ mod tests {
                 user: "u".into(),
                 session: None,
                 socket_path: None,
+                backend: Default::default(),
+                edit_layout: false,
             },
             connection: ConnectionState::Online,
             server_version: None,
             protocol: None,
+            backend: None,
+            available_backends: Vec::new(),
             snapshot: Some(Arc::new(SessionSnapshot {
                 version: "0.9.5".into(),
                 protocol: 22,

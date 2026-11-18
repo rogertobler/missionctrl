@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -66,7 +67,13 @@ import ch.inscribe.missionctrl.SpeechPrefs
 import ch.inscribe.missionctrl.WhisperModelInfo
 import ch.inscribe.missionctrl.WhisperStore
 import ch.inscribe.missionctrl.core.Connection
+import ch.inscribe.missionctrl.core.DetectedBackend
+import ch.inscribe.missionctrl.core.McException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 @Composable
 internal fun Page(title: String, nav: Nav, content: @Composable () -> Unit) {
@@ -113,7 +120,7 @@ fun SettingsScreen(core: Core, nav: Nav) {
             }
             Divider()
             val term by core.terminal.collectAsState()
-            RowItem(stringResource(R.string.settings_terminal), icon = McIcons.Terminal, onClick = { nav.go(Screen.Terminal) }, value = "${if (term.tui) "TUI" else stringResource(R.string.settings_term_view_normal)} · ${term.scheme(c.dark).displayName()} · ${TerminalPrefs.sizeLabel(term.fontSize, LocalConfiguration.current.locales[0])}") {
+            RowItem(stringResource(R.string.settings_terminal), icon = McIcons.Terminal, onClick = { nav.go(Screen.Terminal) }, value = "${if (term.tui) stringResource(R.string.settings_term_view_live) else stringResource(R.string.settings_term_view_normal)} · ${term.scheme(c.dark).displayName()} · ${TerminalPrefs.sizeLabel(term.fontSize, LocalConfiguration.current.locales[0])}") {
                 McIcon(McIcons.Chevron, c.muted, 16.dp)
             }
             Divider()
@@ -300,6 +307,7 @@ fun ServersScreen(core: Core, nav: Nav) {
     val c = LocalMc.current
     val saved by core.servers.collectAsState()
     val state by core.real.collectAsState()
+    val tags = rememberServerTags(core)
     Page(stringResource(R.string.settings_servers), nav) {
         Block {
             saved.forEach { s ->
@@ -308,7 +316,7 @@ fun ServersScreen(core: Core, nav: Nav) {
                 Row(Modifier.fillMaxWidth().clickable { nav.go(Screen.ServerEdit(s.id)) }.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).then(if (online) Modifier.background(c.accentText) else Modifier.border(1.5.dp, c.muted, RoundedCornerShape(4.dp))))
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, style = McType.body, color = c.text)
+                        Text(serverLabel(s.name, tags[s.id]), style = McType.body, color = c.text)
                         EllipsisText("${s.user}@${s.host}" + if (s.port != 22) ":${s.port}" else "", McType.path, c.muted)
                     }
                     Text(conn?.let { connectionText(core, s.id, it) } ?: stringResource(R.string.settings_server_passive), style = McType.caption, color = if (online) c.text else c.muted)
@@ -348,10 +356,111 @@ fun ServerEditScreen(core: Core, nav: Nav, serverId: String?) {
     var autoConnect by remember { mutableStateOf(existing?.autoConnect ?: true) }
     var notify by remember { mutableStateOf(existing?.notify ?: true) }
     var confirmRemove by remember { mutableStateOf(false) }
+    var backend by remember { mutableStateOf(existing?.backend ?: SavedServer.BACKEND_AUTO) }
+    var socket by remember { mutableStateOf(existing?.socketPath ?: "") }
+    var editLayout by remember { mutableStateOf(existing?.editLayout ?: false) }
+    var detection by remember { mutableStateOf<Detection?>(null) }
+    var twoHerdr by remember { mutableStateOf<List<DetectedBackend>?>(null) }
+    var askStartCore by remember { mutableStateOf(false) }
+    // The form as it was when detection ran: its result applies to that server only.
+    var detected by remember { mutableStateOf<SavedServer?>(null) }
+    var detectJob by remember { mutableStateOf<Job?>(null) }
+    var detectedPassword by remember { mutableStateOf<String?>(null) }
     val conn = state.servers.firstOrNull { it.id == id }?.connection
+
+    /** The form as a server of type [type], under [serverId]. Null while host or user are missing. */
+    fun build(type: String = backend, serverId: String = id): SavedServer? {
+        if (host.isBlank() || user.isBlank()) return null
+        return SavedServer(
+            id = serverId, name = name.ifBlank { host }, host = host.trim(), port = port.toIntOrNull() ?: 22, user = user.trim(),
+            session = session.ifBlank { null }, keyId = if (usePassword) null else keyId, autoConnect = autoConnect, notify = notify,
+            backend = type, socketPath = socket.trim().ifEmpty { null }?.takeIf { type != SavedServer.BACKEND_AUTO },
+            editLayout = editLayout && type != SavedServer.BACKEND_TUI,
+        )
+    }
+    val newPassword = { if (usePassword && password.isNotEmpty()) password else null }
+    var saving by remember { mutableStateOf(false) }
+    fun save(servers: List<SavedServer>) {
+        if (saving) return
+        saving = true
+        // Read before anything suspends: what was typed when Save was tapped is what is saved.
+        val typed = newPassword()
+        val withPassword = usePassword
+        scope.launch {
+            // A second entry ("Both") gets the password the first one has, typed or stored.
+            val pw = if (withPassword) core.effectivePassword(id, typed) else null
+            runCatching { servers.forEach { core.saveServer(it, if (it.id == id) typed else pw) } }
+                .onSuccess { nav.back() }.onFailure { saving = false; context.toast(it.message, long = true) }
+        }
+    }
+    /**
+     * Saves [types] for the server detection ran on, the first under this form's id. Any change
+     * to the address or login since then cancelled that detection, so the form still matches it;
+     * a socket was not part of it (detection looks where herdr puts its sockets).
+     */
+    fun saveDetected(types: List<String>) {
+        val ran = detected ?: return
+        // The form may have changed in the same frame the result arrived, before the effect
+        // below could forget it: save only what detection really looked at.
+        if (!Backends.stillMatches(ran, detectedPassword, build(SavedServer.BACKEND_AUTO), newPassword())) return
+        save(types.mapIndexedNotNull { i, type -> build(type, if (i == 0) id else core.newServerId())?.copy(socketPath = null) })
+    }
+    fun detect() {
+        val server = build(SavedServer.BACKEND_AUTO) ?: return
+        detectJob?.cancel()
+        detected = server
+        detectedPassword = newPassword()
+        detection = Detection.Checking
+        detectJob = scope.launch {
+            val result = try {
+                Result.success(withTimeout(DETECT_TIMEOUT_MS) { core.detectBackends(server, newPassword()) })
+            } catch (e: TimeoutCancellationException) {
+                Result.failure(e)
+            } catch (e: CancellationException) {
+                throw e // the form changed: this result is for a server that is no longer asked for
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            // Edited meanwhile (the effect below has not run yet): the result is for another server.
+            if (!Backends.stillMatches(server, detectedPassword, build(SavedServer.BACKEND_AUTO), newPassword()) || backend != SavedServer.BACKEND_AUTO) return@launch
+            val found = result.getOrNull()
+            detection = when (val e = result.exceptionOrNull()) {
+                null -> Backends.status(found.orEmpty())
+                is McException.HostKeyUnknown -> Detection.HostKeyUnknown(e.host, e.port.toInt(), e.fingerprint, e.openssh)
+                is McException.HostKeyChanged -> Detection.HostKeyChanged(e.fingerprint)
+                is McException.AuthFailed -> Detection.AuthFailed
+                else -> Detection.Unclear(e.message)
+            }
+            if (found != null) when (Backends.outcome(found)) {
+                DetectOutcome.Save -> saveDetected(listOf(SavedServer.BACKEND_AUTO))
+                DetectOutcome.AskWhich -> twoHerdr = found
+                DetectOutcome.AskStartCore -> askStartCore = true
+                DetectOutcome.Stay -> {}
+            }
+        }
+    }
+    // Any change to what detection looked at makes its result stale: stop it and forget it.
+    // (Detection ran on [detected]; the effect also runs once at the start, when nothing ran yet.)
+    LaunchedEffect(host, port, user, session, backend, usePassword, keyId, password) {
+        val ran = detected ?: return@LaunchedEffect
+        val same = backend == SavedServer.BACKEND_AUTO && Backends.stillMatches(ran, detectedPassword, build(SavedServer.BACKEND_AUTO), newPassword())
+        if (!same) {
+            detectJob?.cancel()
+            detectJob = null
+            detected = null
+            detection = null
+            twoHerdr = null
+            askStartCore = false
+        }
+    }
+    // A socket only counts for a fixed type; switching to Auto forgets it.
+    LaunchedEffect(backend) { if (backend == SavedServer.BACKEND_AUTO) socket = "" }
+    // Auto only looks again when the address changed: an existing server keeps what it found.
+    val mustDetect = Backends.mustDetect(existing, backend, host, port, user, session)
 
     Page(if (existing == null) stringResource(R.string.settings_server_new) else existing.name, nav) {
         if (conn != null) Text(connectionText(core, existing?.id.orEmpty(), conn), style = McType.small, color = if (conn is Connection.Online) c.accentText else c.muted)
+        conn?.let { connectionLongRes(it, existing?.backend) }?.let { Text(stringResource(it), style = McType.small, color = c.muted) }
         if (conn is Connection.HostKeyUnknown) {
             Block {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -375,6 +484,39 @@ fun ServerEditScreen(core: Core, nav: Nav, serverId: String?) {
                 }
                 LabeledField(stringResource(R.string.settings_server_user), user, { user = it }, stringResource(R.string.settings_server_user_hint), mono = true, address = true)
                 LabeledField(stringResource(R.string.settings_server_session), session, { session = it }, stringResource(R.string.settings_server_session_hint), mono = true, address = true)
+            }
+        }
+        SectionTitle(stringResource(R.string.settings_herdr))
+        Block {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.settings_backend), style = McType.small, color = c.muted)
+                val types = listOf(SavedServer.BACKEND_AUTO, SavedServer.BACKEND_TUI, SavedServer.BACKEND_CORE)
+                Segmented(types.map { backendName(it) }, types.indexOf(backend).coerceAtLeast(0), { backend = types[it] }, Modifier.fillMaxWidth())
+                Text(
+                    stringResource(
+                        when (backend) {
+                            SavedServer.BACKEND_TUI -> R.string.settings_backend_tui_hint
+                            SavedServer.BACKEND_CORE -> R.string.settings_backend_core_hint
+                            else -> R.string.settings_backend_auto_hint
+                        },
+                    ),
+                    style = McType.caption, color = c.muted,
+                )
+                if (backend != SavedServer.BACKEND_AUTO) {
+                    LabeledField(stringResource(R.string.settings_server_socket), socket, { socket = it.trim() }, stringResource(R.string.settings_server_socket_hint), mono = true, address = true)
+                }
+                if (backend != SavedServer.BACKEND_TUI) {
+                    Row(Modifier.fillMaxWidth().toggleable(editLayout, role = Role.Switch) { editLayout = it }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.settings_core_edit_layout), style = McType.body, color = c.text)
+                            Text(stringResource(R.string.settings_core_edit_layout_hint), style = McType.caption, color = c.muted)
+                        }
+                        McSwitch(editLayout, null)
+                    }
+                }
+                detection?.let { d ->
+                    DetectionStatus(d) { key -> core.trustHostKey(key.host, key.port, key.openssh); detect() }
+                }
             }
         }
         SectionTitle(stringResource(R.string.settings_login))
@@ -434,25 +576,31 @@ fun ServerEditScreen(core: Core, nav: Nav, serverId: String?) {
                 }
             }
         }
-        PrimaryButton(stringResource(R.string.settings_save), Modifier.fillMaxWidth()) {
-            if (host.isBlank() || user.isBlank()) return@PrimaryButton
+        PrimaryButton(stringResource(if (mustDetect) R.string.settings_server_connect_save else R.string.settings_save), Modifier.fillMaxWidth()) {
+            if (detection == Detection.Checking || saving) return@PrimaryButton
+            val server = build() ?: return@PrimaryButton
             if (!usePassword && keys.none { it.id == keyId }) { context.toast(resources.getString(R.string.settings_need_key)); return@PrimaryButton }
-            val server = SavedServer(
-                id = id, name = name.ifBlank { host }, host = host.trim(), port = port.toIntOrNull() ?: 22, user = user.trim(),
-                session = session.ifBlank { null }, keyId = if (usePassword) null else keyId, autoConnect = autoConnect, notify = notify,
-            )
-            scope.launch {
-                runCatching { core.saveServer(server, if (usePassword && password.isNotEmpty()) password else null) }
-                    .onSuccess { nav.back() }.onFailure { context.toast(it.message, long = true) }
-            }
+            if (mustDetect) detect() else save(listOf(server))
         }
         if (existing != null) SecondaryButton(stringResource(R.string.settings_server_remove), Modifier.fillMaxWidth(), color = c.danger) { confirmRemove = true }
+    }
+    twoHerdr?.let { found ->
+        TwoHerdrSheet(name.ifBlank { host }, found, onSave = { types ->
+            twoHerdr = null
+            saveDetected(types)
+        }, onDismiss = { twoHerdr = null })
+    }
+    if (askStartCore) {
+        StartCoreDialog(onSave = { askStartCore = false; saveDetected(listOf(SavedServer.BACKEND_CORE)) }, onDismiss = { askStartCore = false })
     }
     if (confirmRemove && existing != null) {
         ConfirmDialog(stringResource(R.string.settings_server_remove_title, existing.name), stringResource(R.string.settings_server_remove_text), stringResource(R.string.settings_remove),
             onConfirm = { confirmRemove = false; core.removeServer(existing.id); nav.back() }, onDismiss = { confirmRemove = false })
     }
 }
+
+/** Detection logs in and looks around; a hanging server must not keep the form waiting. */
+private const val DETECT_TIMEOUT_MS = 45_000L
 
 private val SpeechLanguages = listOf(
     "de-CH" to R.string.settings_speech_lang_de_ch, "de-DE" to R.string.settings_speech_lang_de, "en-US" to R.string.settings_speech_lang_en,
@@ -726,12 +874,12 @@ fun TerminalScreen(core: Core, nav: Nav) {
     }
     Page(stringResource(R.string.settings_terminal), nav) {
         SectionTitle(stringResource(R.string.settings_view))
-        Segmented(listOf(stringResource(R.string.settings_term_view_normal), "TUI"), if (term.tui) 1 else 0, { core.terminal.set(term.copy(tui = it == 1)) })
-        // Both described all the time, so the choice is made knowing the TUI's drawback.
+        Segmented(listOf(stringResource(R.string.settings_term_view_normal), stringResource(R.string.settings_term_view_live)), if (term.tui) 1 else 0, { core.terminal.set(term.copy(tui = it == 1)) })
+        // Both described all the time, so the choice is made knowing the live terminal's drawback.
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
                 stringResource(R.string.settings_term_view_normal) to stringResource(R.string.settings_term_normal_desc),
-                "TUI" to stringResource(R.string.settings_term_tui_desc),
+                stringResource(R.string.settings_term_view_live) to stringResource(R.string.settings_term_tui_desc),
                 stringResource(R.string.settings_term_tui_drawback) to stringResource(R.string.settings_term_tui_drawback_desc),
             ).forEach { (title, text) ->
                 Column {
@@ -739,6 +887,7 @@ fun TerminalScreen(core: Core, nav: Nav) {
                     Text(text, style = McType.caption, color = c.muted)
                 }
             }
+            Text(stringResource(R.string.settings_term_tui_core_note), style = McType.caption, color = c.muted)
         }
         if (term.tui) {
             SectionTitle(stringResource(R.string.settings_term_linger))

@@ -3,4 +3,5 @@
 mod client;
 pub mod model;
 
+pub(crate) use client::read_line;
 pub use client::{HerdrClient, Subscription, socket_candidates};

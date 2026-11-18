@@ -164,7 +164,7 @@ class TranscriptPager(private val core: Core, private val serverId: String, priv
             if (start == null) h.note = HistoryNote.OnlyLastLines
         } finally {
             // Back to the normal view even if the page goes away meanwhile (rotation, back):
-            // a cancelled close() would leave Claude in its transcript view on the laptop.
+            // a cancelled close() would leave Claude in its transcript view on the desktop.
             withContext(NonCancellable) { runCatching { withTimeout(10_000) { close() } } }
             h.busy = false
             h.lastAttempt = System.currentTimeMillis()

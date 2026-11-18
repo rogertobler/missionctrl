@@ -22,6 +22,11 @@ import ch.inscribe.missionctrl.core.ServerRow
 import ch.inscribe.missionctrl.core.Status
 import ch.inscribe.missionctrl.ui.Names
 import ch.inscribe.missionctrl.ui.PaneTextTools
+import ch.inscribe.missionctrl.ui.isError
+import ch.inscribe.missionctrl.ui.backendOf
+import ch.inscribe.missionctrl.ui.connectionShortRes
+import ch.inscribe.missionctrl.ui.Backends
+import ch.inscribe.missionctrl.ui.serverLabel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -143,7 +148,7 @@ class FleetService : Service() {
                 if (core.visible || !core.notifyConnection.value || !core.serverNotifies(id)) continue
                 val server = core.state.value.servers.firstOrNull { it.id == id } ?: continue
                 synchronized(this) { lostShown += id }
-                Notifications.connectionLost(this, server)
+                Notifications.connectionLost(this, server, core.servers.value.backendOf(id), Notifications.serverLabelOf(this, core, id, server.name))
             }
         }
     }
@@ -159,7 +164,8 @@ class FleetService : Service() {
         val question = core.screenText(a.serverId, a.paneId)?.let { PaneTextTools.question(it, maxLines = 8) }
         // It may have been answered while the screen was read.
         if (core.state.value.agents.none { key(it) == key(a) && it.status == Status.BLOCKED }) return
-        Notifications.agent(this, core, a, R.string.fleetservice_agent_waiting, question, Notifications.CHANNEL_WAITING)
+        val title = if (a.isError()) R.string.fleetservice_agent_error else R.string.fleetservice_agent_waiting
+        Notifications.agent(this, core, a, title, question, Notifications.CHANNEL_WAITING)
     }
 
     companion object {
@@ -342,6 +348,12 @@ object Notifications {
         )
     }
 
+    /** The server's name, with its type where the host is saved twice (as in the app). */
+    fun serverLabelOf(context: Context, core: Core, serverId: String, name: String): String {
+        val tag = Backends.tagged(core.servers.value) { id -> core.real.value.servers.firstOrNull { it.id == id }?.backend }[serverId]
+        return serverLabel(context.resources, name, tag)
+    }
+
     /** One notification per pane; a newer one replaces the older (waiting → done). [what] takes the agent's name. */
     fun agent(context: Context, core: Core, a: AgentRow, @StringRes what: Int, text: String?, channel: String, answers: Boolean = true) {
         val name = Names.title(a.tab, a.workspace, a.name, Names.duplicateTabs(core.state.value))
@@ -357,7 +369,7 @@ object Notifications {
             .setContentTitle(title)
             .setContentText(text?.let(PaneTextTools::headline) ?: a.serverName)
             .apply { if (!text.isNullOrBlank()) style = Notification.BigTextStyle().bigText(text) }
-            .setSubText(listOfNotNull(a.serverName, a.workspace).joinToString(" · "))
+            .setSubText(listOfNotNull(serverLabelOf(context, core, a.serverId, a.serverName), a.workspace).joinToString(" · "))
             .setAutoCancel(true)
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
@@ -373,14 +385,14 @@ object Notifications {
 
     private fun connectionId(serverId: String) = "conn|$serverId".hashCode()
 
-    fun connectionLost(context: Context, server: ServerRow) {
+    fun connectionLost(context: Context, server: ServerRow, backend: String?, label: String) {
         val retry = PendingIntent.getBroadcast(
             context, connectionId(server.id),
             Intent(context, ReplyReceiver::class.java).setAction(ReplyReceiver.ACTION_RETRY).putExtra(FleetService.EXTRA_SERVER, server.id).putExtra(FleetService.EXTRA_PANE, ""),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val reason = when (val c = server.connection) {
-            is Connection.Reconnecting -> c.error
+            is Connection.Reconnecting -> if (c.absent) context.getString(connectionShortRes(c, backend)) else c.error
             is Connection.Failed -> c.message
             is Connection.AuthFailed -> context.getString(R.string.fleetservice_auth_rejected)
             else -> context.getString(R.string.fleetservice_unreachable)
@@ -388,7 +400,7 @@ object Notifications {
         val missing = context.getString(R.string.fleetservice_lost_text)
         val n = Notification.Builder(context, CHANNEL_CONNECTION)
             .setSmallIcon(R.drawable.ic_stat_mission)
-            .setContentTitle(context.getString(R.string.fleetservice_lost_title, server.name))
+            .setContentTitle(context.getString(R.string.fleetservice_lost_title, label))
             .setContentText("$missing $reason")
             .setStyle(Notification.BigTextStyle().bigText("$missing\n$reason"))
             .setAutoCancel(true)

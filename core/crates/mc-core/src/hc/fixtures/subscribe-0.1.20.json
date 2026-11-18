@@ -1,0 +1,259 @@
+{
+ "id": 2,
+ "jsonrpc": "2.0",
+ "result": {
+  "channel": null,
+  "seq": 123,
+  "terminals": [
+   {
+    "address": "t1",
+    "argv": [
+     "bash"
+    ],
+    "cols": 200,
+    "created_ms": 1794400213500,
+    "cwd": "/home/user",
+    "die_with_parent": false,
+    "exit_code": null,
+    "finished_ms": null,
+    "foreground": {
+     "argv": [
+      "bash"
+     ],
+     "cwd": "/home/user",
+     "name": "bash",
+     "pid": 1793534
+    },
+    "identity": "ghostty",
+    "keep": false,
+    "labels": {},
+    "name": "probe",
+    "notify": true,
+    "parent": null,
+    "pid": 1793534,
+    "reason": null,
+    "reported": false,
+    "rm": false,
+    "rows": 120,
+    "screen": "exact",
+    "signal": null,
+    "state": "live",
+    "status": null,
+    "status_ms": null,
+    "template": null,
+    "title": "user@box: ~",
+    "turn": 0
+   },
+   {
+    "address": "t12",
+    "argv": [
+     "sh",
+     "-c",
+     "printf '\\033]7501;state=working:app=codex\\033\\\\'; sleep 2; printf '\\033]7501;state=idle:app=codex\\033\\\\'; sleep 600"
+    ],
+    "cols": 200,
+    "created_ms": 1794401100587,
+    "cwd": "/home/user",
+    "die_with_parent": false,
+    "exit_code": 0,
+    "finished_ms": 1794401702596,
+    "identity": "ghostty",
+    "keep": false,
+    "labels": {
+     "herdr.seen": "0",
+     "demo.scene": "1"
+    },
+    "name": "codex",
+    "notify": true,
+    "parent": null,
+    "pid": 1797544,
+    "reason": "exited",
+    "reported": true,
+    "rm": false,
+    "rows": 120,
+    "screen": "exact",
+    "signal": null,
+    "state": "finished",
+    "status": null,
+    "status_ms": 1794401702596,
+    "template": null,
+    "title": "",
+    "turn": 1
+   },
+   {
+    "address": "t13",
+    "argv": [
+     "sh",
+     "-c",
+     "printf '\\033]7501;state=blocked:app=claude-code\\033\\\\'; sleep 86400"
+    ],
+    "cols": 200,
+    "created_ms": 1794402118580,
+    "cwd": "/home/user",
+    "die_with_parent": false,
+    "exit_code": null,
+    "finished_ms": null,
+    "foreground": {
+     "argv": [
+      "sh",
+      "-c",
+      "printf '\\033]7501;state=blocked:app=claude-code\\033\\\\'; sleep 86400"
+     ],
+     "cwd": "/home/user",
+     "name": "sh",
+     "pid": 1801113
+    },
+    "identity": "ghostty",
+    "keep": false,
+    "labels": {
+     "herdr.seen": "0",
+     "demo.scene": "1"
+    },
+    "name": "claude",
+    "notify": true,
+    "parent": null,
+    "pid": 1801113,
+    "reason": null,
+    "reported": true,
+    "rm": false,
+    "rows": 120,
+    "screen": "exact",
+    "signal": null,
+    "state": "live",
+    "status": {
+     "app": "claude-code",
+     "state": "blocked"
+    },
+    "status_ms": 1794402118582,
+    "template": null,
+    "title": "",
+    "turn": 0
+   },
+   {
+    "address": "t14",
+    "argv": [
+     "bash"
+    ],
+    "cols": 200,
+    "created_ms": 1794402118610,
+    "cwd": "/home/user",
+    "die_with_parent": false,
+    "exit_code": null,
+    "finished_ms": null,
+    "foreground": {
+     "argv": [
+      "bash"
+     ],
+     "cwd": "/home/user",
+     "name": "bash",
+     "pid": 1801121
+    },
+    "identity": "ghostty",
+    "keep": false,
+    "labels": {
+     "demo.scene": "1"
+    },
+    "name": "api-shell",
+    "notify": true,
+    "parent": null,
+    "pid": 1801121,
+    "reason": null,
+    "reported": false,
+    "rm": false,
+    "rows": 120,
+    "screen": "exact",
+    "signal": null,
+    "state": "live",
+    "status": null,
+    "status_ms": null,
+    "template": null,
+    "title": "user@box: ~",
+    "turn": 0
+   },
+   {
+    "address": "t15",
+    "argv": [
+     "bash"
+    ],
+    "cols": 200,
+    "created_ms": 1794402118635,
+    "cwd": "/home/user",
+    "die_with_parent": false,
+    "exit_code": null,
+    "finished_ms": null,
+    "foreground": {
+     "argv": [
+      "bash"
+     ],
+     "cwd": "/home/user",
+     "name": "bash",
+     "pid": 1801133
+    },
+    "identity": "ghostty",
+    "keep": false,
+    "labels": {
+     "herdr.space": "s1",
+     "herdr.tab": "k2",
+     "demo.scene": "1"
+    },
+    "name": "labeled",
+    "notify": true,
+    "parent": null,
+    "pid": 1801133,
+    "reason": null,
+    "reported": false,
+    "rm": false,
+    "rows": 120,
+    "screen": "exact",
+    "signal": null,
+    "state": "live",
+    "status": null,
+    "status_ms": null,
+    "template": null,
+    "title": "user@box: ~",
+    "turn": 0
+   },
+   {
+    "address": "t16",
+    "argv": [
+     "bash"
+    ],
+    "cols": 200,
+    "created_ms": 1794402118660,
+    "cwd": "/home/user",
+    "die_with_parent": false,
+    "exit_code": null,
+    "finished_ms": null,
+    "foreground": {
+     "argv": [
+      "bash"
+     ],
+     "cwd": "/home/user",
+     "name": "bash",
+     "pid": 1801147
+    },
+    "identity": "ghostty",
+    "keep": false,
+    "labels": {
+     "demo.scene": "1"
+    },
+    "name": "loose",
+    "notify": true,
+    "parent": null,
+    "pid": 1801147,
+    "reason": null,
+    "reported": false,
+    "rm": false,
+    "rows": 120,
+    "screen": "exact",
+    "signal": null,
+    "state": "live",
+    "status": null,
+    "status_ms": null,
+    "template": null,
+    "title": "user@box: ~",
+    "turn": 0
+   }
+  ]
+ }
+}

@@ -32,11 +32,15 @@ const UPLOAD_TIMEOUT: Duration = Duration::from_secs(120);
 /// anything the login prints first (motd, `.bashrc` noise) is skipped.
 const OUTPUT_MARK: &str = "@@missionctrl-output@@";
 
-/// Environment of the remote login, needed to locate the herdr socket.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Environment of the remote login, needed to locate the herdr and
+/// herdr-core sockets.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RemoteEnv {
     pub home: String,
     pub xdg_config_home: Option<String>,
+    pub xdg_runtime_dir: Option<String>,
+    pub xdg_state_home: Option<String>,
+    pub uid: Option<u32>,
 }
 
 pub enum Transport {
@@ -67,9 +71,20 @@ impl Transport {
     /// (`~/.cache/missionctrl/uploads/`) and return its absolute path.
     /// `file_name` is sanitized and made unique.
     pub async fn upload(&self, file_name: &str, data: &[u8]) -> Result<String> {
+        self.write_cache_file("uploads", file_name, data).await
+    }
+
+    /// Store `data` as a new file under `~/.cache/missionctrl/<subdir>/` on
+    /// the server (owner-only); returns its absolute path.
+    pub async fn write_cache_file(
+        &self,
+        subdir: &str,
+        file_name: &str,
+        data: &[u8],
+    ) -> Result<String> {
         let env = self.remote_env().await?;
         let dir = format!(
-            "{}/.cache/missionctrl/uploads",
+            "{}/.cache/missionctrl/{subdir}",
             env.home.trim_end_matches('/')
         );
         let path = format!("{dir}/{}", unique_upload_name(file_name));
@@ -185,12 +200,17 @@ impl LocalTransport {
 
     fn remote_env(&self) -> Result<RemoteEnv> {
         let home = std::env::var("HOME").map_err(|_| Error::Protocol("HOME is not set".into()))?;
-        let xdg_config_home = std::env::var("XDG_CONFIG_HOME")
+        let var = |name: &str| std::env::var(name).ok().filter(|v| !v.is_empty());
+        // The owner of HOME: close enough for a local development server.
+        let uid = std::fs::metadata(&home)
             .ok()
-            .filter(|v| !v.is_empty());
+            .map(|m| std::os::unix::fs::MetadataExt::uid(&m));
         Ok(RemoteEnv {
             home,
-            xdg_config_home,
+            xdg_config_home: var("XDG_CONFIG_HOME"),
+            xdg_runtime_dir: var("XDG_RUNTIME_DIR"),
+            xdg_state_home: var("XDG_STATE_HOME"),
+            uid,
         })
     }
 
@@ -411,7 +431,9 @@ impl SshTransport {
         self.env
             .get_or_try_init(|| async {
                 let out = self
-                    .exec_sh(r#"printf '%s\n%s\n' "$HOME" "${XDG_CONFIG_HOME:-}""#)
+                    .exec_sh(
+                        r#"printf '%s\n%s\n%s\n%s\n%s\n' "$HOME" "${XDG_CONFIG_HOME:-}" "${XDG_RUNTIME_DIR:-}" "${XDG_STATE_HOME:-}" "$(id -u)""#,
+                    )
                     .await?;
                 parse_remote_env(&out)
             })
@@ -510,13 +532,22 @@ fn parse_remote_env(out: &str) -> Result<RemoteEnv> {
         .filter(|h| h.starts_with('/'))
         .ok_or_else(|| Error::Protocol(format!("unexpected remote HOME: {out:?}")))?
         .to_owned();
-    let xdg_config_home = lines
-        .next()
-        .filter(|v| v.starts_with('/'))
-        .map(str::to_owned);
+    let mut path = || {
+        lines
+            .next()
+            .filter(|v| v.starts_with('/'))
+            .map(str::to_owned)
+    };
+    let xdg_config_home = path();
+    let xdg_runtime_dir = path();
+    let xdg_state_home = path();
+    let uid = lines.next().and_then(|v| v.trim().parse().ok());
     Ok(RemoteEnv {
         home,
         xdg_config_home,
+        xdg_runtime_dir,
+        xdg_state_home,
+        uid,
     })
 }
 
@@ -805,9 +836,14 @@ mod tests {
             parse_remote_env(&after_mark(out).unwrap()).unwrap(),
             RemoteEnv {
                 home: "/home/me".into(),
-                xdg_config_home: None
+                ..Default::default()
             }
         );
+        let out = "@@missionctrl-output@@\n/home/me\n\n/run/user/1000\n\n1000\n";
+        let env = parse_remote_env(&after_mark(out).unwrap()).unwrap();
+        assert_eq!(env.xdg_runtime_dir.as_deref(), Some("/run/user/1000"));
+        assert_eq!(env.xdg_state_home, None);
+        assert_eq!(env.uid, Some(1000));
         assert!(after_mark("no mark here\n/home/me\n").is_err());
     }
 

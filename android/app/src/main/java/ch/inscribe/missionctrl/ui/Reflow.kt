@@ -13,9 +13,9 @@ data class DisplayLine(
 )
 
 /**
- * Fits terminal lines formatted for the laptop's pane width to a narrower phone.
+ * Fits terminal lines formatted for the desktop's pane width to a narrower phone.
  *
- * herdr's pane has one size, the laptop terminal's, and agents like Claude Code format their
+ * herdr's pane has one size, the desktop terminal's, and agents like Claude Code format their
  * output to it. Wrapping those lines again on the phone tears separators apart and sends
  * continuation lines to the margin. This keeps separators on one line, shrinks long runs of
  * spaces, joins paragraphs the agent wrapped at the pane width, and indents wrapped lines under

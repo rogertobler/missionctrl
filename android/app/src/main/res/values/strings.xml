@@ -153,6 +153,7 @@
     <string name="detail_opening">Opening…</string>
     <string name="detail_no_tab">No tab open.</string>
     <string name="detail_not_there">This tab is not here yet. On a slow connection it may take a while; it opens by itself once it is there.</string>
+    <string name="detail_gone">This tab no longer exists. It may have been closed on the desktop or from another device.</string>
     <string name="detail_uploaded">Uploaded: %1$s</string>
     <string name="detail_uploading">Uploading…</string>
     <string name="detail_back">Back</string>
@@ -431,6 +432,10 @@
     <string name="workspaces_move_down">Move “%1$s” down</string>
     <string name="workspaces_tab_settings_desc">Settings for tab “%1$s”</string>
     <string name="workspaces_close_tab_desc">Close tab “%1$s”</string>
+    <string name="workspaces_close_terminal">Close terminal</string>
+    <string name="workspaces_close_terminal_title">Close terminal “%1$s”?</string>
+    <string name="workspaces_close_terminal_text">Everything running in it will be stopped. This can\'t be undone.</string>
+    <string name="workspaces_close_terminal_desc">Close terminal “%1$s”</string>
     <string name="workspaces_new_tab">New tab</string>
     <string name="workspaces_look">Look</string>
     <string name="workspaces_no_icon">No icon (color bar)</string>
@@ -485,6 +490,7 @@
     <string name="settings_speech_engine_service">Service</string>
     <string name="settings_terminal">Terminal</string>
     <string name="settings_term_view_normal">Normal</string>
+    <string name="settings_term_view_live">Live terminal</string>
     <string name="settings_background">Background &amp; notifications</string>
     <string name="settings_background_on">connected</string>
     <string name="settings_background_off">off</string>
@@ -514,7 +520,7 @@
     <!-- Settings: Input -->
     <string name="settings_input">Input</string>
     <string name="settings_hide_keyboard">Close keyboard after sending</string>
-    <string name="settings_hide_keyboard_hint">Also applies to Enter in the TUI. Off: the keyboard stays open for the next message</string>
+    <string name="settings_hide_keyboard_hint">Also applies to Enter in the live terminal. Off: the keyboard stays open for the next message</string>
     <string name="settings_suggestions">Word suggestions and autocorrect</string>
     <string name="settings_suggestions_hint">In the reply text field. The keyboard learns nothing from the text. What exactly it suggests is set in the keyboard itself</string>
 
@@ -639,15 +645,15 @@
     <string name="settings_font_smaller">Smaller text</string>
     <string name="settings_font_larger">Larger text</string>
     <string name="settings_view">View</string>
-    <string name="settings_term_normal_desc">Colored history, wrapped to the phone\'s width. The pane on the laptop stays as it is.</string>
+    <string name="settings_term_normal_desc">Colored history, wrapped to the phone\'s width. The pane on the desktop stays as it is.</string>
     <string name="settings_term_tui_desc">A real terminal, live: use vim, htop, menus and Claude directly. Swipe up and down to scroll. The keyboard button opens the text field; the terminal button in it sends every key straight to the pane.</string>
-    <string name="settings_term_tui_drawback">Drawback of the TUI</string>
-    <string name="settings_term_tui_drawback_desc">While it is open, the pane has the phone\'s size, on the laptop too: there it shrinks and its content rewraps. The pane only gets its size back when you leave the TUI or the app goes to the background.</string>
+    <string name="settings_term_tui_drawback">Drawback of the live terminal</string>
+    <string name="settings_term_tui_drawback_desc">While it is open, the pane has the phone\'s size, on the desktop too: there it shrinks and its content rewraps. The pane only gets its size back when you leave the live terminal or the app goes to the background.</string>
     <string name="settings_term_linger">Keep open after swiping away</string>
     <string name="settings_term_linger_off">Close immediately</string>
     <string name="settings_term_linger_seconds">%1$d s</string>
     <string name="settings_term_linger_minutes">%1$d min</string>
-    <string name="settings_term_linger_desc">How long a pane\'s TUI stays connected after you swipe away or leave the terminal. Longer: swiping back is live immediately. Shorter: the pane gets its size back on the laptop sooner, and less data flows. When the app goes to the background, the TUI closes immediately. Either way, the last frame stays visible until the connection is back.</string>
+    <string name="settings_term_linger_desc">How long a pane\'s live terminal stays connected after you swipe away or leave the terminal. Longer: swiping back is live immediately. Shorter: the pane gets its size back on the desktop sooner, and less data flows. When the app goes to the background, the live terminal closes immediately. Either way, the last frame stays visible until the connection is back.</string>
     <string name="settings_font_size">Font size</string>
     <string name="settings_color_scheme">Color scheme</string>
     <string name="settings_scheme_auto">MissionCtrl (follows light/dark)</string>
@@ -842,4 +848,84 @@
     <string name="settings_demo_hint">Sample agents instead of your servers, e.g. for screenshots</string>
     <string name="mission_connecting">Connecting…</string>
     <string name="connection_key_locked">SSH key locked – tap to unlock</string>
+    <!-- herdr-core -->
+    <string name="settings_herdr">herdr</string>
+    <string name="settings_backend">Type</string>
+    <string name="settings_backend_auto">Auto</string>
+    <string name="settings_backend_tui">herdr TUI</string>
+    <string name="settings_backend_core">herdr-core</string>
+    <string name="settings_backend_auto_hint">The app finds out by itself whether the server runs the herdr TUI or herdr-core.</string>
+    <string name="settings_backend_tui_hint">The app connects only to the herdr TUI and doesn\'t look for herdr-core.</string>
+    <string name="settings_backend_core_hint">The app connects only to herdr-core and doesn\'t look for the herdr TUI. If herdr-core isn\'t running, the app starts it.</string>
+    <string name="settings_server_socket">Socket (empty = default)</string>
+    <string name="settings_server_socket_hint">Default</string>
+    <string name="settings_core_edit_layout">Edit layout</string>
+    <string name="settings_core_edit_layout_hint">Lets the app create, rename, move and close workspaces and tabs. The Herdr app on the desktop shows the same layout, so changes appear there too. Before it changes anything, the app saves a copy of the layout on the server. Off: the app only shows workspaces and tabs.</string>
+    <string name="core_layout_err_unreadable">This version of MissionCtrl can\'t edit this layout. Nothing was changed. Make the change in the Herdr app.</string>
+    <string name="core_layout_err_conflict">The layout was being changed elsewhere at the same time. Your change wasn\'t saved. Try again.</string>
+    <string name="core_layout_err_partial">Not everything was closed. A terminal is still running, or something was added in the meantime. Check what\'s left and close it again.</string>
+    <string name="core_layout_err_terminal_running">The terminal is still running. Try closing it again.</string>
+    <string name="core_layout_err_child_elsewhere">Not closed. A terminal started from here is shown in another tab or workspace and would end too. Close it there first.</string>
+    <string name="core_layout_err_other_machine">Not closed. It contains a terminal from another machine. Close it in the Herdr app.</string>
+    <string name="core_layout_err_unclear">No answer from the server, so it\'s unclear whether the change went through. Check the list before you try again.</string>
+    <string name="core_layout_err_gone">This workspace or tab no longer exists. It may have been closed on the desktop.</string>
+    <string name="core_layout_err_busy">An earlier start here hasn\'t finished yet. Nothing was started. Try again in a minute.</string>
+    <string name="core_layout_err_unplaced">Tab not closed. A terminal in it belongs to a tab that isn\'t in the layout yet. Try again in a moment. If that doesn\'t help, close the whole workspace or open the Herdr app.</string>
+    <string name="core_layout_err_backup">Couldn\'t save a copy of the layout on the server. Nothing was changed. Try again.</string>
+    <string name="core_layout_err_too_large">The layout is too large to add more. Nothing was changed. Close workspaces or tabs you no longer need.</string>
+    <string name="core_layout_err_terminal_placed">Not closed. The terminal is now part of a workspace. You\'ll find it there.</string>
+    <string name="core_layout_err_terminal_claimed">Not closed. The terminal belongs to a workspace that has no tabs yet. Wait a moment and look there, or close it in the Herdr app.</string>
+    <string name="settings_server_connect_save">Connect and save</string>
+    <string name="settings_detect_checking">Looking for herdr…</string>
+    <string name="settings_detect_found">Found: %1$s</string>
+    <string name="settings_detect_found_both">Found: herdr TUI and herdr-core</string>
+    <string name="settings_detect_core_installed">herdr-core is installed but not running. The app saves this server as herdr-core and starts it when connecting.</string>
+    <string name="settings_detect_none_title">No herdr found</string>
+    <string name="settings_detect_none_text">Login worked, but neither the herdr TUI nor herdr-core is running on this server. Start herdr there, or choose the type yourself.</string>
+    <string name="settings_detect_unclear">Couldn\'t check for herdr. Try again, or choose the type yourself.</string>
+    <string name="settings_two_herdr_title">Two kinds of herdr on %1$s</string>
+    <string name="settings_two_herdr_text">This server has both the herdr TUI and herdr-core. Each has its own agents. Which do you want to see here?</string>
+    <string name="settings_two_herdr_tui_sub">Classic herdr in the terminal</string>
+    <string name="settings_two_herdr_core_sub">The server behind the Herdr app</string>
+    <string name="settings_two_herdr_core_stopped_sub">The server behind the Herdr app. Not running; the app starts it when connecting.</string>
+    <string name="settings_two_herdr_both">Both</string>
+    <string name="settings_two_herdr_both_sub">Two entries: %1$s · TUI and %1$s · Core</string>
+    <string name="backend_short_tui">TUI</string>
+    <string name="backend_short_core">Core</string>
+    <string name="server_with_backend">%1$s · %2$s</string>
+    <string name="workspaces_terminals">Terminals</string>
+    <string name="workspaces_terminals_no_space">not in a space</string>
+    <string name="workspaces_core_hint">Workspaces and tabs come from the Herdr app and stay in sync with it. Terminals without a space are listed under “Terminals”.</string>
+    <string name="status_error">error</string>
+    <string name="fleetservice_agent_error">%1$s reports an error</string>
+    <string name="conn_tui_back_title">herdr TUI is available again</string>
+    <string name="conn_tui_back_text">%1$s is connected to herdr-core. The herdr TUI is running there again.</string>
+    <string name="conn_tui_back_switch">Switch to herdr TUI</string>
+    <string name="conn_tui_back_stay">Stay on herdr-core</string>
+    <string name="conn_incompatible">Update MissionCtrl</string>
+    <string name="conn_incompatible_text">This version of MissionCtrl doesn\'t work with the herdr-core on this server. Update MissionCtrl, then connect again.</string>
+    <string name="conn_no_herdr">No herdr running</string>
+    <string name="conn_no_herdr_text">Neither the herdr TUI nor herdr-core is running on this server. Start herdr there; the app keeps trying.</string>
+    <string name="conn_tui_not_running">herdr TUI isn\'t running</string>
+    <string name="conn_tui_not_running_text">Start herdr on the server, or change the type in the server settings.</string>
+    <string name="conn_core_not_found">herdr-core not found</string>
+    <string name="conn_core_not_found_text">There is no herdr-core on this server. Install it there, or change the type in the server settings.</string>
+    <string name="tui_core_watching">Watching</string>
+    <string name="tui_core_typing">Typing</string>
+    <string name="tui_core_size_desktop" tools:ignore="PluralsCandidate">%1$d×%2$d like on the desktop</string>
+    <string name="tui_core_size_here" tools:ignore="PluralsCandidate">%1$d×%2$d like here</string>
+    <string name="tui_core_watching_hint">You see the terminal as large as on the desktop. Once you type, it fits itself to this screen.</string>
+    <string name="tui_core_typing_hint">On the desktop, the terminal is now as small as here, until someone types there again.</string>
+    <string name="tui_core_desktop_took_over">The desktop has the terminal again. Type to take it back.</string>
+    <string name="tui_core_zoom_hint">Pinch to see the whole terminal.</string>
+    <string name="tui_core_overview_desc">Overview: the part you see</string>
+    <string name="settings_term_tui_core_note">With herdr-core, the pane keeps its desktop size while you only watch. It takes this screen\'s size once you type.</string>
+    <plurals name="workspaces_terminals_count">
+        <item quantity="one">%1$d terminal</item>
+        <item quantity="other">%1$d terminals</item>
+    </plurals>
+    <plurals name="workspaces_agents_count">
+        <item quantity="one">%1$d agent</item>
+        <item quantity="other">%1$d agents</item>
+    </plurals>
 </resources>

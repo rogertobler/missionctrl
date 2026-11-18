@@ -117,6 +117,7 @@
     <string name="detail_opening">Öffne …</string>
     <string name="detail_no_tab">Kein Tab offen.</string>
     <string name="detail_not_there">Dieser Tab ist noch nicht da. Bei einer langsamen Verbindung kann das dauern; er öffnet sich von selbst, sobald er da ist.</string>
+    <string name="detail_gone">Diesen Tab gibt es nicht mehr. Vielleicht wurde er am Desktop oder von einem anderen Gerät aus geschlossen.</string>
     <string name="detail_uploaded">Hochgeladen: %1$s</string>
     <string name="detail_uploading">Lade hoch …</string>
     <string name="detail_back">Zurück</string>
@@ -395,6 +396,10 @@
     <string name="workspaces_move_down">«%1$s» nach unten</string>
     <string name="workspaces_tab_settings_desc">Einstellungen für Tab «%1$s»</string>
     <string name="workspaces_close_tab_desc">Tab «%1$s» schliessen</string>
+    <string name="workspaces_close_terminal">Terminal schliessen</string>
+    <string name="workspaces_close_terminal_title">Terminal «%1$s» schliessen?</string>
+    <string name="workspaces_close_terminal_text">Alles, was darin läuft, wird beendet. Das lässt sich nicht rückgängig machen.</string>
+    <string name="workspaces_close_terminal_desc">Terminal «%1$s» schliessen</string>
     <string name="workspaces_new_tab">Neuer Tab</string>
     <string name="workspaces_look">Aussehen</string>
     <string name="workspaces_no_icon">Kein Symbol (Farbstrich)</string>
@@ -449,6 +454,7 @@
     <string name="settings_speech_engine_service">Dienst</string>
     <string name="settings_terminal">Terminal</string>
     <string name="settings_term_view_normal">Normal</string>
+    <string name="settings_term_view_live">Live-Terminal</string>
     <string name="settings_background">Hintergrund &amp; Meldungen</string>
     <string name="settings_background_on">verbunden</string>
     <string name="settings_background_off">aus</string>
@@ -478,7 +484,7 @@
     <!-- Einstellungen: Eingabe -->
     <string name="settings_input">Eingabe</string>
     <string name="settings_hide_keyboard">Tastatur nach dem Senden schliessen</string>
-    <string name="settings_hide_keyboard_hint">Gilt auch für Enter in der TUI. Aus: Tastatur bleibt offen für die nächste Nachricht</string>
+    <string name="settings_hide_keyboard_hint">Gilt auch für Enter im Live-Terminal. Aus: Tastatur bleibt offen für die nächste Nachricht</string>
     <string name="settings_suggestions">Wortvorschläge und Autokorrektur</string>
     <string name="settings_suggestions_hint">Im Textfeld für Antworten. Die Tastatur lernt dabei nichts aus dem Text. Was genau sie vorschlägt, stellst du in der Tastatur selbst ein</string>
 
@@ -603,15 +609,15 @@
     <string name="settings_font_smaller">Schrift kleiner</string>
     <string name="settings_font_larger">Schrift grösser</string>
     <string name="settings_view">Ansicht</string>
-    <string name="settings_term_normal_desc">Farbiger Verlauf, an die Handybreite umbrochen. Die Pane am Laptop bleibt, wie sie ist.</string>
+    <string name="settings_term_normal_desc">Farbiger Verlauf, an die Handybreite umbrochen. Die Pane am Desktop bleibt, wie sie ist.</string>
     <string name="settings_term_tui_desc">Echtes Terminal, live: vim, htop, Menüs und Claude direkt bedienen. Wischen nach oben und unten blättert. Der Tastatur-Knopf öffnet das Textfeld; der Terminal-Knopf darin schickt jede Taste direkt an die Pane.</string>
-    <string name="settings_term_tui_drawback">Nachteil der TUI</string>
-    <string name="settings_term_tui_drawback_desc">Solange sie offen ist, hat die Pane die Grösse des Handys, auch am Laptop: Dort wird sie klein und der Inhalt neu umbrochen. Erst wenn du die TUI verlässt oder die App in den Hintergrund geht, bekommt die Pane ihre Grösse zurück.</string>
+    <string name="settings_term_tui_drawback">Nachteil des Live-Terminals</string>
+    <string name="settings_term_tui_drawback_desc">Solange es offen ist, hat die Pane die Grösse des Handys, auch am Desktop: Dort wird sie klein und der Inhalt neu umbrochen. Erst wenn du das Live-Terminal verlässt oder die App in den Hintergrund geht, bekommt die Pane ihre Grösse zurück.</string>
     <string name="settings_term_linger">Nach dem Wegwischen offen halten</string>
     <string name="settings_term_linger_off">Sofort zu</string>
     <string name="settings_term_linger_seconds">%1$d s</string>
     <string name="settings_term_linger_minutes">%1$d min</string>
-    <string name="settings_term_linger_desc">Wie lange die TUI einer Pane verbunden bleibt, nachdem du weggewischt oder das Terminal verlassen hast. Länger: Zurückwischen ist sofort live. Kürzer: Die Pane bekommt am Laptop schneller ihre Grösse zurück, und es fliessen weniger Daten. Geht die App in den Hintergrund, schliesst die TUI sofort. Das letzte Bild bleibt in jedem Fall stehen, bis die Verbindung wieder steht.</string>
+    <string name="settings_term_linger_desc">Wie lange das Live-Terminal einer Pane verbunden bleibt, nachdem du weggewischt oder das Terminal verlassen hast. Länger: Zurückwischen ist sofort live. Kürzer: Die Pane bekommt am Desktop schneller ihre Grösse zurück, und es fliessen weniger Daten. Geht die App in den Hintergrund, schliesst das Live-Terminal sofort. Das letzte Bild bleibt in jedem Fall stehen, bis die Verbindung wieder steht.</string>
     <string name="settings_font_size">Schriftgrösse</string>
     <string name="settings_color_scheme">Farbschema</string>
     <string name="settings_scheme_auto">MissionCtrl (folgt Hell/Dunkel)</string>
@@ -808,6 +814,86 @@
     <string name="mission_connecting">Verbinde …</string>
     <string name="connection_key_locked">SSH-Schlüssel gesperrt – tippen zum Entsperren</string>
 
+    <!-- herdr-core -->
+    <string name="settings_herdr">herdr</string>
+    <string name="settings_backend">Typ</string>
+    <string name="settings_backend_auto">Auto</string>
+    <string name="settings_backend_tui">herdr TUI</string>
+    <string name="settings_backend_core">herdr-core</string>
+    <string name="settings_backend_auto_hint">Die App findet selbst heraus, ob auf dem Server das herdr TUI oder herdr-core läuft.</string>
+    <string name="settings_backend_tui_hint">Die App verbindet sich nur mit dem herdr TUI und sucht nicht nach herdr-core.</string>
+    <string name="settings_backend_core_hint">Die App verbindet sich nur mit herdr-core und sucht nicht nach dem herdr TUI. Läuft herdr-core nicht, startet die App es.</string>
+    <string name="settings_server_socket">Socket (leer = Standard)</string>
+    <string name="settings_server_socket_hint">Standard</string>
+    <string name="settings_core_edit_layout">Layout bearbeiten</string>
+    <string name="settings_core_edit_layout_hint">Die App darf Workspaces und Tabs anlegen, umbenennen, verschieben und schliessen. Die Herdr-App am Desktop zeigt dasselbe Layout, Änderungen erscheinen also auch dort. Bevor die App etwas ändert, legt sie auf dem Server eine Kopie des Layouts ab. Aus: Die App zeigt Workspaces und Tabs nur an.</string>
+    <string name="core_layout_err_unreadable">Diese Version von MissionCtrl kann dieses Layout nicht bearbeiten. Es wurde nichts geändert. Mach die Änderung in der Herdr-App.</string>
+    <string name="core_layout_err_conflict">Das Layout wurde gleichzeitig anderswo geändert. Deine Änderung ist nicht gespeichert. Versuch es nochmals.</string>
+    <string name="core_layout_err_partial">Es wurde nicht alles geschlossen. Ein Terminal läuft noch, oder es ist inzwischen etwas dazugekommen. Schau nach, was übrig ist, und schliess es nochmals.</string>
+    <string name="core_layout_err_terminal_running">Das Terminal läuft noch. Versuch es nochmals zu schliessen.</string>
+    <string name="core_layout_err_child_elsewhere">Nicht geschlossen. Ein Terminal, das von hier gestartet wurde, steht in einem anderen Tab oder Workspace und würde mitbeendet. Schliess es zuerst dort.</string>
+    <string name="core_layout_err_other_machine">Nicht geschlossen. Darin ist ein Terminal von einem anderen Rechner. Schliess es in der Herdr-App.</string>
+    <string name="core_layout_err_unclear">Der Server hat nicht geantwortet. Es ist unklar, ob die Änderung angekommen ist. Schau in der Liste nach, bevor du es nochmals versuchst.</string>
+    <string name="core_layout_err_gone">Diesen Workspace oder Tab gibt es nicht mehr. Vielleicht wurde er am Desktop geschlossen.</string>
+    <string name="core_layout_err_busy">Ein früherer Start an dieser Stelle ist noch nicht abgeschlossen. Es wurde nichts gestartet. Versuch es in einer Minute nochmals.</string>
+    <string name="core_layout_err_unplaced">Tab nicht geschlossen. Ein Terminal darin gehört zu einem Tab, der noch nicht im Layout steht. Versuch es gleich nochmals. Hilft das nicht, schliess den ganzen Workspace oder öffne die Herdr-App.</string>
+    <string name="core_layout_err_backup">Auf dem Server konnte keine Kopie des Layouts abgelegt werden. Es wurde nichts geändert. Versuch es nochmals.</string>
+    <string name="core_layout_err_too_large">Das Layout ist zu gross für weitere Einträge. Es wurde nichts geändert. Schliess Workspaces oder Tabs, die du nicht mehr brauchst.</string>
+    <string name="core_layout_err_terminal_placed">Nicht geschlossen. Das Terminal gehört inzwischen zu einem Workspace. Du findest es dort.</string>
+    <string name="core_layout_err_terminal_claimed">Nicht geschlossen. Das Terminal gehört zu einem Workspace, der noch keine Tabs hat. Warte kurz und schau dort nach, oder schliess es in der Herdr-App.</string>
+    <string name="settings_server_connect_save">Verbinden und speichern</string>
+    <string name="settings_detect_checking">Suche herdr …</string>
+    <string name="settings_detect_found">Gefunden: %1$s</string>
+    <string name="settings_detect_found_both">Gefunden: herdr TUI und herdr-core</string>
+    <string name="settings_detect_core_installed">herdr-core ist installiert, läuft aber nicht. Die App speichert den Server als herdr-core und startet es beim Verbinden.</string>
+    <string name="settings_detect_none_title">Kein herdr gefunden</string>
+    <string name="settings_detect_none_text">Die Anmeldung hat geklappt, aber auf dem Server läuft weder das herdr TUI noch herdr-core. Starte herdr dort oder wähle den Typ selbst.</string>
+    <string name="settings_detect_unclear">Die Suche nach herdr hat nicht geklappt. Versuch es nochmals oder wähle den Typ selbst.</string>
+    <string name="settings_two_herdr_title">Zweimal herdr auf %1$s</string>
+    <string name="settings_two_herdr_text">Auf diesem Server gibt es das herdr TUI und herdr-core. Jedes hat seine eigenen Agents. Was willst du hier sehen?</string>
+    <string name="settings_two_herdr_tui_sub">Das klassische herdr im Terminal</string>
+    <string name="settings_two_herdr_core_sub">Der Server hinter der Herdr-App</string>
+    <string name="settings_two_herdr_core_stopped_sub">Der Server hinter der Herdr-App. Läuft nicht; die App startet es beim Verbinden.</string>
+    <string name="settings_two_herdr_both">Beide</string>
+    <string name="settings_two_herdr_both_sub">Zwei Einträge: %1$s · TUI und %1$s · Core</string>
+    <string name="backend_short_tui">TUI</string>
+    <string name="backend_short_core">Core</string>
+    <string name="server_with_backend">%1$s · %2$s</string>
+    <string name="workspaces_terminals">Terminals</string>
+    <string name="workspaces_terminals_no_space">ohne Space</string>
+    <string name="workspaces_core_hint">Workspaces und Tabs kommen aus der Herdr-App und bleiben mit ihr gleich. Terminals ohne Space stehen unter «Terminals».</string>
+    <string name="status_error">Fehler</string>
+    <string name="fleetservice_agent_error">%1$s meldet einen Fehler</string>
+    <string name="conn_tui_back_title">herdr TUI ist wieder da</string>
+    <string name="conn_tui_back_text">%1$s ist mit herdr-core verbunden. Dort läuft auch wieder das herdr TUI.</string>
+    <string name="conn_tui_back_switch">Zum herdr TUI wechseln</string>
+    <string name="conn_tui_back_stay">Bei herdr-core bleiben</string>
+    <string name="conn_incompatible">MissionCtrl aktualisieren</string>
+    <string name="conn_incompatible_text">Diese Version von MissionCtrl passt nicht zu herdr-core auf diesem Server. Aktualisiere MissionCtrl und verbinde dann neu.</string>
+    <string name="conn_no_herdr">Kein herdr läuft</string>
+    <string name="conn_no_herdr_text">Auf dem Server läuft weder das herdr TUI noch herdr-core. Starte herdr dort; die App versucht es weiter.</string>
+    <string name="conn_tui_not_running">herdr TUI läuft nicht</string>
+    <string name="conn_tui_not_running_text">Starte herdr auf dem Server oder ändere den Typ beim Server.</string>
+    <string name="conn_core_not_found">herdr-core nicht gefunden</string>
+    <string name="conn_core_not_found_text">Auf dem Server gibt es kein herdr-core. Installiere es dort oder ändere den Typ beim Server.</string>
+    <string name="tui_core_watching">Du schaust zu</string>
+    <string name="tui_core_typing">Du tippst</string>
+    <string name="tui_core_size_desktop">%1$d×%2$d wie am Desktop</string>
+    <string name="tui_core_size_here">%1$d×%2$d wie hier</string>
+    <string name="tui_core_watching_hint">Du siehst das Terminal so gross wie am Desktop. Sobald du tippst, passt es sich diesem Bildschirm an.</string>
+    <string name="tui_core_typing_hint">Am Desktop ist das Terminal jetzt so klein wie hier, bis dort wieder jemand tippt.</string>
+    <string name="tui_core_desktop_took_over">Der Desktop hat das Terminal wieder. Tippe, um es zurückzuholen.</string>
+    <string name="tui_core_zoom_hint">Mit zwei Fingern zusammenziehen zeigt das ganze Terminal.</string>
+    <string name="tui_core_overview_desc">Übersicht: der sichtbare Ausschnitt</string>
+    <string name="settings_term_tui_core_note">Bei herdr-core behält die Pane ihre Desktop-Grösse, solange du nur zuschaust. Erst wenn du tippst, bekommt sie die Grösse dieses Bildschirms.</string>
+    <plurals name="workspaces_terminals_count">
+        <item quantity="one">%1$d Terminal</item>
+        <item quantity="other">%1$d Terminals</item>
+    </plurals>
+    <plurals name="workspaces_agents_count">
+        <item quantity="one">%1$d Agent</item>
+        <item quantity="other">%1$d Agents</item>
+    </plurals>
     <!-- Überschreibt Texte aus den Bibliotheken Compose und Material 3: deren deutsche Übersetzung
          schreibt Eszett und nennt das Bottom Sheet «Tabelle» (TalkBack sagt sonst «Tabelle schliessen» mit Eszett). -->
     <string name="close_sheet" tools:ignore="PrivateResource,MissingTranslation,ExtraTranslation,UnusedResources">Blatt schliessen</string>

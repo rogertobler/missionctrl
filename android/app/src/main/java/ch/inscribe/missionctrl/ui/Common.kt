@@ -8,6 +8,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -62,6 +64,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.widget.doAfterTextChanged
 import ch.inscribe.missionctrl.R
+import ch.inscribe.missionctrl.core.McException
 
 @Composable
 fun McIcon(icon: ImageVector, tint: Color, size: Dp = 18.dp, description: String? = null) {
@@ -322,9 +325,28 @@ fun rememberHideKeyboard(): () -> Unit {
     }
 }
 
+/**
+ * Leaves the text field being typed in: the keyboard closes and nothing else takes the focus
+ * (otherwise Android hands it to the next field when the focused one goes away, which opens the
+ * keyboard again).
+ */
+@Composable
+fun rememberLeaveField(): () -> Unit {
+    val view = LocalView.current
+    val focus = LocalFocusManager.current
+    return remember(view, focus) {
+        {
+            val focused = view.findFocus()
+            focused?.clearFocus()
+            view.context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow((focused ?: view).windowToken, 0)
+            focus.clearFocus(force = true)
+        }
+    }
+}
+
 /** Labelled input box. */
 @Composable
-fun LabeledField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", mono: Boolean = false, password: Boolean = false, number: Boolean = false, address: Boolean = false) {
+fun LabeledField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", mono: Boolean = false, password: Boolean = false, number: Boolean = false, address: Boolean = false, onSubmit: (() -> Unit)? = null) {
     val c = LocalMc.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = McType.small, color = c.muted)
@@ -333,7 +355,7 @@ fun LabeledField(label: String, value: String, onValueChange: (String) -> Unit, 
                 .background(c.bg).padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            PrivateTextField(value, onValueChange, placeholder, Modifier.fillMaxWidth(), mono = mono, password = password, number = number, address = address)
+            PrivateTextField(value, onValueChange, placeholder, Modifier.fillMaxWidth(), mono = mono, password = password, number = number, address = address, onSubmit = onSubmit)
         }
     }
 }
@@ -373,7 +395,7 @@ fun parseRgb(s: String): Int? = s.trim().removePrefix("#").takeIf { it.length ==
 
 /** A switch in the app's accent colours. */
 @Composable
-fun McSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
+fun McSwitch(checked: Boolean, onChange: ((Boolean) -> Unit)?) {
     val c = LocalMc.current
     Switch(checked, onChange, colors = SwitchDefaults.colors(checkedTrackColor = c.accent, checkedThumbColor = c.onAccent))
 }
@@ -381,6 +403,40 @@ fun McSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
 /** Short message at the bottom of the screen (errors: their message, or "Error"). */
 fun Context.toast(message: String?, long: Boolean = false) =
     Toast.makeText(this, message ?: getString(R.string.common_error), if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
+
+/**
+ * The message for a failed change: the core's layout problems (herdr-core) in the user's words,
+ * anything else as the core worded it. [closingTerminal]: the change closed a single loose
+ * terminal, where "not everything was closed" means that terminal still runs.
+ */
+fun Context.errorText(t: Throwable, closingTerminal: Boolean = false): String? = when (t) {
+    is McException.Layout -> layoutErrorText(t.problem, closingTerminal)?.let(::getString) ?: t.message
+    is McException.NoSuchDirectory -> getString(R.string.workspaces_no_such_dir, t.path)
+    else -> t.message
+}
+
+/** The string for one of the core's layout problem codes, or null for an unknown code. */
+@StringRes
+fun layoutErrorText(problem: String, closingTerminal: Boolean = false): Int? = when (problem) {
+    "unreadable" -> R.string.core_layout_err_unreadable
+    "conflict" -> R.string.core_layout_err_conflict
+    "partial" -> if (closingTerminal) R.string.core_layout_err_terminal_running else R.string.core_layout_err_partial
+    "child_elsewhere" -> R.string.core_layout_err_child_elsewhere
+    "other_machine" -> R.string.core_layout_err_other_machine
+    "unclear" -> R.string.core_layout_err_unclear
+    "gone" -> R.string.core_layout_err_gone
+    "busy" -> R.string.core_layout_err_busy
+    "unplaced" -> R.string.core_layout_err_unplaced
+    "backup" -> R.string.core_layout_err_backup
+    "too_large" -> R.string.core_layout_err_too_large
+    "placed" -> R.string.core_layout_err_terminal_placed
+    "claimed" -> R.string.core_layout_err_terminal_claimed
+    else -> null
+}
+
+/** [toast] with [errorText]; layout problems are long sentences and stay longer. */
+fun Context.toastError(t: Throwable, closingTerminal: Boolean = false) =
+    toast(errorText(t, closingTerminal), long = t is McException.Layout || t is McException.NoSuchDirectory)
 
 @Composable
 fun VSpace(h: Dp) = Spacer(Modifier.height(h))

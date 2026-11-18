@@ -206,6 +206,15 @@ sealed interface TabLine {
  * Every tab in herdr's order: its agents, or the tab itself when no agent runs in it, so a
  * workspace with only a shell shows up too.
  */
+/**
+ * What a tab is called in a list under its workspace: its name, else its place there (1, 2, …),
+ * as the Herdr app calls a tab without a name. Elsewhere (titles, notifications) a nameless
+ * tab still goes by its workspace, which says more out of context.
+ */
+fun tabListName(ws: WorkspaceRow, tab: TabRow): String = tab.label.ifEmpty {
+    (ws.tabs.indexOfFirst { it.tabId == tab.tabId } + 1).takeIf { it > 0 }?.toString() ?: ws.label
+}
+
 fun tabLines(state: FleetState): List<TabLine> {
     val agents = orderedAgents(state, false)
     val byTab = agents.groupBy { it.serverId to it.tabId }

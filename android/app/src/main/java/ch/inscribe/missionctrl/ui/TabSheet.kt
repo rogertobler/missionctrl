@@ -46,6 +46,8 @@ fun TabSheet(core: Core, nav: Nav, a: TabLine, onDismiss: () -> Unit) {
     val looks by core.looks.collectAsState()
     val pins by core.pins.collectAsState()
     val ws = state.workspaces.firstOrNull { it.serverId == a.serverId && it.workspaceId == a.workspaceId }
+    val single = isLooseTerminalTab(a.tabId)
+    val fixed = a.serverId in rememberFixedLayouts(core) || single
     val tabLabel = a.tabLabel
     var name by remember(a.tabId) { mutableStateOf(tabLabel) }
     var looksOpen by remember { mutableStateOf(false) }
@@ -54,6 +56,8 @@ fun TabSheet(core: Core, nav: Nav, a: TabLine, onDismiss: () -> Unit) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = c.bg) {
+        // Inside the sheet: it is a window of its own, and its view holds the field's focus.
+        val leaveField = rememberLeaveField()
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 WorkspaceMark(core, a.serverId, a.workspaceId, a.workspace, 28.dp, tab = tabLabel)
@@ -63,7 +67,7 @@ fun TabSheet(core: Core, nav: Nav, a: TabLine, onDismiss: () -> Unit) {
                         is TabLine.Shell -> tabTitleOf(core, tabLabel, a.workspace, tabLabel)
                     }
                     EllipsisText(title, McType.title, c.text)
-                    EllipsisText(listOfNotNull(a.serverName, a.workspace).joinToString(" · "), McType.path, c.muted)
+                    EllipsisText(listOfNotNull(serverLabel(a.serverName, rememberServerTags(core)[a.serverId]), a.workspace).joinToString(" · "), McType.path, c.muted)
                 }
             }
             Block {
@@ -77,12 +81,12 @@ fun TabSheet(core: Core, nav: Nav, a: TabLine, onDismiss: () -> Unit) {
                     RowItem(stringResource(R.string.tabsheet_ws_settings, ws.label), icon = McIcons.Sliders, onClick = { onDismiss(); nav.go(Screen.Workspace(ws.serverId, ws.workspaceId)) })
                 }
             }
-            // Order lives in herdr: every list, the terminal pages and the laptop follow.
-            fun move(what: suspend () -> Unit) = scope.launch { runCatching { what() }.onFailure { context.toast(it.message) } }
+            // Order lives in herdr: every list, the terminal pages and the desktop follow.
+            fun move(what: suspend () -> Unit) = scope.launch { runCatching { what() }.onFailure { context.toastError(it) } }
             val tabPos = core.tabPosition(a.serverId, a.tabId)
             val wsPos = core.workspacePosition(a.serverId, a.workspaceId)
-            SectionTitle(stringResource(R.string.tabsheet_order))
-            Block {
+            if (!fixed) SectionTitle(stringResource(R.string.tabsheet_order))
+            if (!fixed) Block {
                 MoveRow(stringResource(R.string.tabsheet_tab), tabPos, onMove = { d -> move { core.moveTab(a.serverId, a.tabId, d) } })
                 if (ws != null) {
                     Divider()
@@ -92,17 +96,22 @@ fun TabSheet(core: Core, nav: Nav, a: TabLine, onDismiss: () -> Unit) {
             if (ws != null && tabLabel.isNotEmpty()) {
                 SectionTitle(stringResource(R.string.tabsheet_tab))
                 Block {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        LabeledField(stringResource(R.string.tabsheet_name), name, { name = it })
-                        if (name.isNotBlank() && name != tabLabel) SecondaryButton(stringResource(R.string.tabsheet_rename), Modifier.fillMaxWidth()) {
+                    if (!fixed) Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        fun rename() {
+                            val to = name.trim()
+                            if (to.isEmpty() || to == tabLabel) return
+                            // Close the keyboard first, so the focus does not jump to the next field.
+                            leaveField()
                             scope.launch {
-                                runCatching { core.renameTab(a.serverId, a.tabId, name.trim()) }
-                                    .onSuccess { core.moveTabLook(ws, tabLabel, name.trim()); context.toast(resources.getString(R.string.tabsheet_renamed)) }
-                                    .onFailure { context.toast(it.message) }
+                                runCatching { core.renameTab(a.serverId, a.tabId, to) }
+                                    .onSuccess { core.moveTabLook(ws, tabLabel, to); context.toast(resources.getString(R.string.tabsheet_renamed)) }
+                                    .onFailure { context.toastError(it) }
                             }
                         }
+                        LabeledField(stringResource(R.string.tabsheet_name), name, { name = it }, onSubmit = { rename() })
+                        if (name.isNotBlank() && name != tabLabel) SecondaryButton(stringResource(R.string.tabsheet_rename), Modifier.fillMaxWidth()) { rename() }
                     }
-                    Divider()
+                    if (!fixed) Divider()
                     RowItem(stringResource(R.string.tabsheet_color_icon), onClick = { looksOpen = !looksOpen }) {
                         McIcon(if (looksOpen) McIcons.ChevronDown else McIcons.Chevron, c.muted, 16.dp)
                     }
@@ -111,11 +120,15 @@ fun TabSheet(core: Core, nav: Nav, a: TabLine, onDismiss: () -> Unit) {
                             inherited = looks.workspaceColorOrNull(ws.serverId, ws.workspaceId, ws.label)) { core.setTabLook(ws, tabLabel, it) }
                     }
                 }
-                SecondaryButton(stringResource(R.string.tabsheet_close_tab), Modifier.fillMaxWidth(), color = c.danger) { confirmClose = true }
+                if (!fixed) SecondaryButton(stringResource(R.string.tabsheet_close_tab), Modifier.fillMaxWidth(), color = c.danger) { confirmClose = true }
+            }
+            // A herdr-core terminal without a space: only closing it, the layout stays as it is.
+            if (single && a.serverId !in rememberFixedLayouts(core)) {
+                SecondaryButton(stringResource(R.string.workspaces_close_terminal), Modifier.fillMaxWidth(), color = c.danger) { confirmClose = true }
             }
         }
     }
-    if (confirmClose) CloseTabDialog(core, a.serverId, a.tabId, tabLabel) { confirmClose = false; onDismiss() }
+    if (confirmClose) CloseTabDialog(core, a.serverId, a.tabId, tabLabel.ifEmpty { a.workspace }, a.paneId) { confirmClose = false; onDismiss() }
 }
 
 /** "Tab  ↑ ↓": one place up or down; the ends grey out. */

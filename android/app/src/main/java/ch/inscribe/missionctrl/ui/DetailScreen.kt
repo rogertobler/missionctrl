@@ -31,6 +31,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -102,10 +103,40 @@ fun DetailScreen(core: Core, nav: Nav, target: Screen.Detail, showBack: Boolean)
     val known = pages.any { it.serverId == target.serverId && it.paneId == target.paneId }
     var slow by remember(target) { mutableStateOf(false) }
     LaunchedEffect(target) { delay(5_000); slow = true }
+    // Once the page was here, its absence means it was closed elsewhere (desktop, another device),
+    // not that it is still coming. The last state is kept while reconnecting, so a dropped line
+    // does not count as closed. Should the page come back, it shows again.
+    // The page's tab, followed while it is here: a terminal can still move into its tab later.
+    val pageTab = pages.firstOrNull { it.serverId == target.serverId && it.paneId == target.paneId }?.tabId
+    var wasHere by remember(target) { mutableStateOf(false) }
+    var lastTab by remember(target) { mutableStateOf<String?>(null) }
+    LaunchedEffect(target, pageTab) {
+        if (pageTab != null) {
+            wasHere = true
+            lastTab = pageTab
+        }
+    }
+    // An agent that ended in a later pane of its tab leaves the tab in place: show the tab instead.
+    val stillThere = if (!known && wasHere) {
+        state.workspaces.filter { it.serverId == target.serverId }.flatMap { it.tabs }.firstOrNull { it.tabId == lastTab }?.firstPaneId
+    } else null
+    LaunchedEffect(stillThere) {
+        if (stillThere == null) return@LaunchedEffect
+        val d = Screen.Detail(target.serverId, stillThere)
+        if (nav.current == target) nav.stack[nav.stack.lastIndex] = d
+        // Unfolded, the right side shows the last detail while the start page is current.
+        if (nav.lastDetail == target) nav.lastDetail = d
+    }
     if (!known) {
         Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(if (slow) R.string.detail_not_there else R.string.detail_opening), style = McType.small, color = c.muted, textAlign = TextAlign.Center)
-            if (slow) SecondaryButton(stringResource(R.string.detail_back)) { nav.back() }
+            val text = when {
+                stillThere != null -> R.string.detail_opening
+                wasHere -> R.string.detail_gone
+                slow -> R.string.detail_not_there
+                else -> R.string.detail_opening
+            }
+            Text(stringResource(text), style = McType.small, color = c.muted, textAlign = TextAlign.Center)
+            if ((slow || wasHere) && stillThere == null) SecondaryButton(stringResource(R.string.detail_back)) { nav.back() }
         }
         return
     }
@@ -128,8 +159,25 @@ fun DetailScreen(core: Core, nav: Nav, target: Screen.Detail, showBack: Boolean)
     val page = pages[pager.currentPage.coerceIn(0, pages.lastIndex)]
     val agent = state.agents.firstOrNull { it.serverId == page.serverId && it.paneId == page.paneId }
     val pinned = pins.any { it.serverId == page.serverId && it.tabId == page.tabId }
+    // The page is a look while the app is in front: on herdr-core the core marks each finished
+    // turn seen once while the look lasts, also turns that end while the page stays open, so
+    // another client's "unread" stays. Leaving the page (or the app going to the background)
+    // ends the look; the next one marks again.
+    // The settled page, not one merely flicked past. The look starts synchronously (also while the
+    // server reconnects; it is served once connected), so leaving always ends it.
+    val onScreen by core.onScreen.collectAsState()
+    val seen = pages[pager.settledPage.coerceIn(0, pages.lastIndex)]
+    DisposableEffect(seen.serverId, seen.paneId, onScreen) {
+        if (onScreen) core.showSeen(seen.serverId, seen.paneId)
+        onDispose { core.forgetSeen(seen.serverId, seen.paneId) }
+    }
+    LaunchedEffect(seen.serverId, seen.paneId, onScreen) {
+        if (onScreen) core.markSeen(seen.serverId, seen.paneId)
+    }
 
     val pageKey = page.serverId + "|" + page.paneId
+    // The connected backend, not the saved type: an "auto" server may be on herdr-core.
+    val onCore = page.serverId in rememberCoreServers(core)
     // Keys typed after a swipe must not go to the page that was left.
     LaunchedEffect(pageKey) { tuiLinks.forEach { (k, l) -> if (k != pageKey) l.hideKeyboard() } }
     var switcher by remember { mutableStateOf(false) }
@@ -209,7 +257,7 @@ fun DetailScreen(core: Core, nav: Nav, target: Screen.Detail, showBack: Boolean)
                     EllipsisText(tabTitleOf(core, page.tab, page.workspace, page.workspace), McType.bodyStrong, c.text)
                     McIcon(McIcons.ChevronDown, c.muted, 14.dp)
                 }
-                EllipsisText(agent?.let { pathLineOf(core, it) } ?: "${page.serverName}/${page.workspace}", McType.path, c.muted)
+                EllipsisText(agent?.let { pathLineOf(core, it) } ?: "${serverLabel(page.serverName, rememberServerTags(core)[page.serverId])}/${page.workspace}", McType.path, c.muted)
             }
             agent?.let {
                 val waiting = it.status == Status.BLOCKED
@@ -263,7 +311,30 @@ fun DetailScreen(core: Core, nav: Nav, target: Screen.Detail, showBack: Boolean)
                     val kind = remember(view.plain, blocked) { if (blocked) PaneTextTools.kind(PaneTextTools.question(view.plain)) else QuestionKind.UNKNOWN }
                     val menuNow = remember(view.plain, blocked) { if (blocked) PaneTextTools.menu(PaneTextTools.question(view.plain)) else null }
                     val keys = PaneTextTools.fitting(barIds, kind).filter { it.id != "stop" || working }
-                    fun sendKeys(keys: List<String>) = scope.launch { runCatching { core.sendKeys(page.serverId, page.paneId, keys) }.onFailure { toast(it.message) } }
+                    fun sendKeys(keys: List<String>) {
+                        // herdr-core: in the live terminal the bar types like the keyboard, so the
+                        // phone takes over the size before the keys arrive.
+                        val link = linkOf(pageKey)
+                        val appCursor = link.live?.screen?.appCursor == true
+                        val bytes = keys.map { TermKeys.named(it, appCursor) }
+                        // While the live terminal is on (also opening or reopening) they go there,
+                        // never overtaking its input on another connection.
+                        if (tui && onCore && link.live?.active == true) {
+                            // Between attempts nothing can take the keys; say so instead of
+                            // dropping them without a word.
+                            if (link.live?.accepting != true) { toast(resources.getString(R.string.tui_connecting)); return }
+                            // Keys without fixed bytes go by name, in the same stream, so they too
+                            // arrive after what was typed before and at the phone's size.
+                            var i = 0
+                            while (i < keys.size) {
+                                val j = (i until keys.size).firstOrNull { (bytes[it] == null) != (bytes[i] == null) } ?: keys.size
+                                if (bytes[i] != null) link.send(bytes.subList(i, j).joinToString("")) else link.keys(keys.subList(i, j))
+                                i = j
+                            }
+                            return
+                        }
+                        scope.launch { runCatching { core.sendKeys(page.serverId, page.paneId, keys) }.onFailure { toast(it.message) } }
+                    }
                     fun press(k: QuickKey) {
                         // A modifier arms (tapped again: off); armed, a plain key goes out with it.
                         k.mod?.let { m -> mod = if (mod == m) null else m; return }
@@ -458,13 +529,15 @@ private fun HistoryTop(h: ClaudeHistory, resting: Boolean, tint: Color, onLoad10
 
 @Composable
 private fun Switcher(core: Core, nav: Nav, current: PaneRef, onOptions: (TabLine) -> Unit, onDone: () -> Unit) {
+    val tags = rememberServerTags(core)
+    val fixedLayouts = rememberFixedLayouts(core)
     val c = LocalMc.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by core.state.collectAsState()
     val grouped by core.groupByWorkspace.collectAsState()
     var newTabIn by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var confirm by remember { mutableStateOf<Triple<String, String, String>?>(null) } // server, tab, label
+    var confirm by remember { mutableStateOf<CloseAsk?>(null) }
     val options = stringResource(R.string.mission_options)
 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -485,7 +558,7 @@ private fun Switcher(core: Core, nav: Nav, current: PaneRef, onOptions: (TabLine
                     Row(Modifier.padding(start = 14.dp, top = 10.dp, end = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         WorkspaceMark(core, ws.serverId, ws.workspaceId, ws.label, 16.dp)
                         Text(ws.label, style = McType.bodyStrong, color = c.text)
-                        Text(ws.serverName, style = McType.path, color = c.muted)
+                        Text(serverLabel(ws.serverName, tags[ws.serverId]), style = McType.path, color = c.muted)
                     }
                     ws.tabs.forEach { tab ->
                         val isCurrent = tab.tabId == current.tabId && ws.serverId == current.serverId
@@ -497,15 +570,16 @@ private fun Switcher(core: Core, nav: Nav, current: PaneRef, onOptions: (TabLine
                                     .combinedClickable(onClick = { tab.firstPaneId?.let { onDone(); nav.openDetail(ws.serverId, it) } }, onLongClick = line?.let { l -> { onOptions(l) } }, onLongClickLabel = options).padding(start = 28.dp, end = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                Text(tab.label, style = McType.body, color = c.text)
+                                Text(tabListName(ws, tab), style = McType.body, color = c.text)
                                 tab.agentType?.let { Text(it, style = McType.path, color = c.muted) }
                                 Box(Modifier.weight(1f))
                                 Text(tabStatus(tab.status), style = McType.caption, color = if (tab.status == Status.BLOCKED) c.accentText else c.muted)
                             }
-                            IconAction(McIcons.Close, stringResource(R.string.detail_close_tab, tab.label), iconSize = 14.dp) { confirm = Triple(ws.serverId, tab.tabId, "${ws.label} · ${tab.label}") }
+                            // The group of loose terminals is one tab here: those close one by one in the list view.
+                            if (ws.serverId !in fixedLayouts && !ws.isUnsorted()) IconAction(McIcons.Close, stringResource(R.string.detail_close_tab, tabListName(ws, tab)), iconSize = 14.dp) { confirm = CloseAsk(ws.serverId, tab.tabId, "${ws.label} · ${tabListName(ws, tab)}") }
                         }
                     }
-                    Row(
+                    if (ws.serverId !in fixedLayouts && !ws.isUnsorted()) Row(
                         Modifier.fillMaxWidth().height(44.dp).clickable { newTabIn = ws.serverId to ws.workspaceId }.padding(start = 28.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) { McIcon(McIcons.Plus, c.muted, 14.dp); Text(stringResource(R.string.detail_new_tab), style = McType.small, color = c.muted) }
@@ -532,7 +606,12 @@ private fun Switcher(core: Core, nav: Nav, current: PaneRef, onOptions: (TabLine
                                     }
                                     Text(statusText(a), style = McType.caption, color = if (a.status == Status.BLOCKED) c.accentText else c.muted)
                                 }
-                                IconAction(McIcons.Close, stringResource(R.string.detail_close_tab, a.tab.orEmpty()), iconSize = 14.dp) { confirm = Triple(a.serverId, a.tabId, "${a.workspace} · ${a.tab}") }
+                                if (a.serverId !in fixedLayouts) {
+                                    val loose = isLooseTerminalTab(a.tabId)
+                                    IconAction(McIcons.Close, if (loose) stringResource(R.string.workspaces_close_terminal_desc, a.tab.orEmpty()) else stringResource(R.string.detail_close_tab, a.tab.orEmpty()), iconSize = 14.dp) {
+                                        confirm = CloseAsk(a.serverId, a.tabId, if (loose) a.tab.orEmpty() else listOfNotNull(a.workspace, a.tab?.ifEmpty { null }).joinToString(" · "), a.paneId)
+                                    }
+                                }
                             }
                         }
                         is TabLine.Shell -> {
@@ -551,17 +630,25 @@ private fun Switcher(core: Core, nav: Nav, current: PaneRef, onOptions: (TabLine
                                     }
                                     Text(tab.agentType ?: stringResource(R.string.mission_shell), style = McType.caption, color = c.muted)
                                 }
-                                IconAction(McIcons.Close, stringResource(R.string.detail_close_tab, tab.label), iconSize = 14.dp) { confirm = Triple(ws.serverId, tab.tabId, "${ws.label} · ${tab.label}") }
+                                if (ws.serverId !in fixedLayouts) {
+                                    val loose = isLooseTerminalTab(tab.tabId)
+                                    IconAction(McIcons.Close, if (loose) stringResource(R.string.workspaces_close_terminal_desc, tab.label) else stringResource(R.string.detail_close_tab, tab.label), iconSize = 14.dp) {
+                                        confirm = CloseAsk(ws.serverId, tab.tabId, if (loose) tab.label else listOfNotNull(ws.label, tab.label.ifEmpty { null }).joinToString(" · "), line.paneId)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-                Row(
+                if (current.serverId !in fixedLayouts && current.workspaceId != UNSORTED_WORKSPACE) Row(
                     Modifier.fillMaxWidth().height(46.dp).clickable { newTabIn = current.serverId to current.workspaceId }.padding(start = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) { McIcon(McIcons.Plus, c.muted, 14.dp); Text(stringResource(R.string.detail_new_tab_in, current.workspace), style = McType.small, color = c.muted) }
             }
         }
     }
-    confirm?.let { (server, tab, label) -> CloseTabDialog(core, server, tab, label) { confirm = null } }
+    confirm?.let { ask -> CloseTabDialog(core, ask.serverId, ask.tabId, ask.label, ask.paneId) { confirm = null } }
 }
+
+/** What the switcher's ✕ asks to close; [paneId] matters for herdr-core's loose terminals. */
+private data class CloseAsk(val serverId: String, val tabId: String, val label: String, val paneId: String? = null)

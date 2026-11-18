@@ -2,11 +2,13 @@ package ch.inscribe.missionctrl
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import ch.inscribe.missionctrl.core.AgentRow
 import ch.inscribe.missionctrl.core.Connection
+import ch.inscribe.missionctrl.core.DetectedBackend
 import ch.inscribe.missionctrl.core.DirInfo
 import ch.inscribe.missionctrl.core.FleetObserver
 import ch.inscribe.missionctrl.core.FleetState
@@ -29,6 +31,7 @@ import ch.inscribe.missionctrl.ui.PaneTextTools
 import ch.inscribe.missionctrl.ui.QuickKeys
 import ch.inscribe.missionctrl.ui.Screen
 import ch.inscribe.missionctrl.ui.TermKeys
+import ch.inscribe.missionctrl.ui.UNSORTED_WORKSPACE
 import ch.inscribe.missionctrl.ui.ThemeMode
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -119,6 +122,7 @@ class Core(private val context: Context) : FleetObserver {
     val keyboardSuggestions = Pref(settings.keyboardSuggestions) { settings.keyboardSuggestions = it }
     /** Button bars and the answer field 40 instead of 48 dp high (more rows for the terminal). */
     val compactKeys = Pref(settings.compactKeys) { settings.compactKeys = it }
+    val pinchHintSeen = Pref(settings.pinchHintSeen) { settings.pinchHintSeen = it }
     val sideCollapsed = Pref(settings.sideListCollapsed) { settings.sideListCollapsed = it }
     val sideWidth = Pref(settings.sideListWidth) { settings.sideListWidth = it }
     val agentSymbol = Pref(settings.agentSymbol) { settings.agentSymbol = it }
@@ -445,13 +449,39 @@ class Core(private val context: Context) : FleetObserver {
         servers.value.firstOrNull { it.id == id }?.let { connect(it) }
     }
 
+    /** "auto" servers whose "herdr TUI is available again" hint was closed (this run of the app). */
+    val stayOnCore = mutableStateListOf<String>()
+
     /** Reconnect one server now (notification action). */
     fun retry(serverId: String) = mc.retry(serverId)
+
+    /** Drop the connection and choose the backend again ("auto" tries the herdr TUI first). */
+    fun reconnect(serverId: String) = mc.reconnect(serverId)
+
+    /** The password to use for [serverId]: [typed], else the stored one (editing without typing it again). */
+    suspend fun effectivePassword(serverId: String, typed: String?): String? =
+        typed ?: io { runCatching { keys.password(serverId) }.getOrNull() }
 
     fun trust(serverId: String, unknown: Connection.HostKeyUnknown) {
         settings.addTrustedKey(Settings.TrustedKey(unknown.host, unknown.port.toInt(), unknown.openssh))
         mc.trustHostKey(unknown.host, unknown.port, unknown.openssh)
         mc.retry(serverId)
+    }
+
+    /**
+     * Which herdr servers [server] has, before it is saved; starts nothing. Throws
+     * McException.HostKeyUnknown / HostKeyChanged / AuthFailed like a connection.
+     */
+    suspend fun detectBackends(server: SavedServer, password: String?): List<DetectedBackend> {
+        // Editing a server without typing its password again: use the stored one.
+        val pw = password ?: if (server.keyId == null) io { runCatching { keys.password(server.id) }.getOrNull() } else null
+        return mc.detectBackends(server.copy(backend = SavedServer.BACKEND_AUTO).toConfig(pw))
+    }
+
+    /** Trust a host key the user confirmed outside a connection (server form). */
+    fun trustHostKey(host: String, port: Int, openssh: String) {
+        settings.addTrustedKey(Settings.TrustedKey(host, port, openssh))
+        mc.trustHostKey(host, port.toUShort(), openssh)
     }
 
     fun forgetHostKey(server: SavedServer) {
@@ -530,21 +560,26 @@ class Core(private val context: Context) : FleetObserver {
         return mc.openTerminal(serverId, paneId, cols.toUShort(), rows.toUShort(), observer)
     }
 
-    // Input goes out one after the other: every send is its own herdr request, and quick
-    // taps (↓ ↓ ⏎) must not overtake each other. The lock is fair, so taps keep their order.
-    private val inputLock = Mutex()
+    // Input to a pane goes out one after the other: every send is its own herdr request, and
+    // quick taps (↓ ↓ ⏎) must not overtake each other. The lock is fair, so taps keep their
+    // order. One lock per pane: on herdr-core a send waits while someone is still typing a line
+    // in that terminal (up to a minute), which must not hold up input to other panes.
+    private val inputLocks = ConcurrentHashMap<String, Mutex>()
+
+    private fun inputLock(serverId: String, paneId: String): Mutex =
+        inputLocks.getOrPut("$serverId|$paneId") { Mutex() }
 
     /** Bumped after every input, so views read the screen again right away. */
     val inputTick = MutableStateFlow(0L)
 
     suspend fun sendKeys(serverId: String, paneId: String, keys: List<String>) {
         if (isDemo(serverId)) return demoFleet.input(paneId, keys = keys)
-        inputLock.withLock { mc.sendKeys(serverId, paneId, keys) }.also { inputTick.update { it + 1 } }
+        inputLock(serverId, paneId).withLock { mc.sendKeys(serverId, paneId, keys) }.also { inputTick.update { it + 1 } }
     }
 
     suspend fun sendText(serverId: String, paneId: String, text: String, enter: Boolean) {
         if (isDemo(serverId)) return demoFleet.input(paneId, text = text.takeIf { enter })
-        inputLock.withLock { mc.sendText(serverId, paneId, TermKeys.message(text), enter) }.also { inputTick.update { it + 1 } }
+        inputLock(serverId, paneId).withLock { mc.sendText(serverId, paneId, TermKeys.message(text), enter) }.also { inputTick.update { it + 1 } }
     }
 
     /**
@@ -557,7 +592,7 @@ class Core(private val context: Context) : FleetObserver {
         if (isDemo(serverId)) { demoFleet.input(paneId, text = text); return PaneTextTools.TextRoute.PLAIN }
         val (route, before) = runCatching { PaneTextTools.route(readScreen(serverId, paneId).text) }
             .getOrDefault(PaneTextTools.TextRoute.PLAIN to emptyList())
-        inputLock.withLock {
+        inputLock(serverId, paneId).withLock {
             if (before.isNotEmpty()) {
                 mc.sendKeys(serverId, paneId, before)
                 // The agent redraws first: the row (or Codex's notes field) becomes an input, or the
@@ -569,6 +604,24 @@ class Core(private val context: Context) : FleetObserver {
         }
         inputTick.update { it + 1 }
         return route
+    }
+
+    /** The pane is on screen with the app in front: a look starts (herdr-core marks its turns seen). */
+    fun showSeen(serverId: String, paneId: String) {
+        if (isDemo(serverId)) return
+        runCatching { mc.showSeen(serverId, paneId) }
+    }
+
+    /** The user looks at this pane's result: clears "done" on herdr-core for every client. */
+    suspend fun markSeen(serverId: String, paneId: String) {
+        if (isDemo(serverId)) return
+        runCatching { mc.markSeen(serverId, paneId) }
+    }
+
+    /** The pane left the screen: on herdr-core the next look marks its result seen again. */
+    fun forgetSeen(serverId: String, paneId: String) {
+        if (isDemo(serverId)) return
+        runCatching { mc.forgetSeen(serverId, paneId) }
     }
 
     suspend fun upload(serverId: String, name: String, data: ByteArray): String = notInDemo(serverId).let { mc.uploadFile(serverId, name, data) }
@@ -584,37 +637,51 @@ class Core(private val context: Context) : FleetObserver {
 
     suspend fun closeTab(serverId: String, tabId: String) = notInDemo(serverId).let { mc.closeTab(serverId, tabId) }
 
+    /** herdr-core: end one terminal that stands in no workspace. */
+    suspend fun closeTerminal(serverId: String, paneId: String) = notInDemo(serverId).let { mc.closeTerminal(serverId, paneId) }
+
     /** Where a tab stands in its workspace and how many there are; null if unknown. */
     fun tabPosition(serverId: String, tabId: String): Pair<Int, Int>? {
         val ws = state.value.workspaces.firstOrNull { w -> w.serverId == serverId && w.tabs.any { it.tabId == tabId } } ?: return null
         return ws.tabs.indexOfFirst { it.tabId == tabId } to ws.tabs.size
     }
 
-    /** Where a workspace stands among its server's workspaces, and how many there are. */
+    /**
+     * Where a workspace stands among its server's workspaces, and how many there are. The
+     * herdr-core "Terminals" group is no workspace of the layout and does not count.
+     */
     fun workspacePosition(serverId: String, workspaceId: String): Pair<Int, Int>? {
-        val list = state.value.workspaces.filter { it.serverId == serverId }
+        val list = movableWorkspaces(serverId)
         val i = list.indexOfFirst { it.workspaceId == workspaceId }
         return if (i < 0) null else i to list.size
     }
 
+    private fun movableWorkspaces(serverId: String) =
+        state.value.workspaces.filter { it.serverId == serverId && it.workspaceId != UNSORTED_WORKSPACE }
+
     /**
      * Moves a tab one place up (−1) or down (+1) in its workspace, on the server, so every view
-     * and the laptop show the new order. herdr inserts before the entry at `insert_index`
+     * and the desktop show the new order. herdr inserts before the entry at `insert_index`
      * of the list as it is before the move.
      */
     suspend fun moveTab(serverId: String, tabId: String, delta: Int) {
         notInDemo(serverId)
-        val (i, n) = tabPosition(serverId, tabId) ?: return
-        if (i + delta !in 0 until n) return
-        mc.moveTab(serverId, tabId, insertIndex(i, delta))
+        val ws = state.value.workspaces.firstOrNull { w -> w.serverId == serverId && w.tabs.any { it.tabId == tabId } } ?: return
+        val i = ws.tabs.indexOfFirst { it.tabId == tabId }
+        if (i + delta !in ws.tabs.indices) return
+        val at = insertIndex(i, delta)
+        // herdr-core takes the tab it goes before in the list as shown here.
+        mc.moveTab(serverId, tabId, at, ws.tabs.getOrNull(at.toInt())?.tabId)
     }
 
     /** Moves a workspace one place up (−1) or down (+1) among its server's workspaces. */
     suspend fun moveWorkspace(serverId: String, workspaceId: String, delta: Int) {
         notInDemo(serverId)
-        val (i, n) = workspacePosition(serverId, workspaceId) ?: return
-        if (i + delta !in 0 until n) return
-        mc.moveWorkspace(serverId, workspaceId, insertIndex(i, delta))
+        val list = movableWorkspaces(serverId)
+        val i = list.indexOfFirst { it.workspaceId == workspaceId }
+        if (i < 0 || i + delta !in list.indices) return
+        val at = insertIndex(i, delta)
+        mc.moveWorkspace(serverId, workspaceId, at, list.getOrNull(at.toInt())?.workspaceId)
     }
 
     private fun insertIndex(from: Int, delta: Int): UInt = (if (delta < 0) from - 1 else from + 2).coerceAtLeast(0).toUInt()

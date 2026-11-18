@@ -94,7 +94,9 @@ fun pathLineOf(core: Core, a: AgentRow): String {
     val prefs by core.pathPrefs.collectAsState()
     val dirs by core.dirs.collectAsState()
     val homes by core.homes.collectAsState()
-    return PathLines.format(a, prefs, a.cwd?.let { dirs["${a.serverId}|$it"] }, homes[a.serverId])
+    // The server's name with its type where the host is saved twice, as in the lists.
+    val server = serverLabel(a.serverName, rememberServerTags(core)[a.serverId])
+    return PathLines.format(a.copy(serverName = server), prefs, a.cwd?.let { dirs["${a.serverId}|$it"] }, homes[a.serverId])
 }
 
 private val examples = mapOf(

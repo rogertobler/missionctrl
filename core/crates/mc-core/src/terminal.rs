@@ -96,6 +96,23 @@ pub struct Screen {
     pub cursor_visible: bool,
     /// Counts processed frames; changes whenever the picture may have.
     pub seq: u64,
+    /// herdr-core only: the app watches the terminal at the size another
+    /// viewer gave it, and the next input takes it over. False while the app
+    /// types (its own size) and always on the herdr TUI.
+    pub watching: bool,
+    /// The program asked for application cursor keys (DECCKM): arrows, Home
+    /// and End go out as `ESC O x` instead of `ESC [ x`.
+    pub app_cursor: bool,
+    /// herdr-core only: a named key went to herdr to be encoded and is not
+    /// answered yet; input typed after it waits.
+    pub keys_pending: bool,
+    /// herdr-core only: counts named keys herdr refused; changes once per
+    /// failure, with its message in `key_error`.
+    pub key_errors: u64,
+    pub key_error: Option<String>,
+    /// herdr-core only: counts the times typed input was refused because too
+    /// much was still waiting to go out ([`InputBudget`]).
+    pub input_refused: u64,
 }
 
 impl Screen {
@@ -111,6 +128,12 @@ impl Screen {
             cursor_col,
             cursor_visible: !screen.hide_cursor(),
             seq,
+            watching: false,
+            app_cursor: screen.application_cursor(),
+            keys_pending: false,
+            key_errors: 0,
+            key_error: None,
+            input_refused: 0,
         }
     }
 
@@ -134,6 +157,82 @@ impl Screen {
             .collect::<Vec<_>>()
             .join("\n")
     }
+}
+
+/// One row as text with SGR colour codes, like herdr's `pane.read` with
+/// `format: "ansi"`: blanks between runs as spaces, every styled run reset
+/// after itself, trailing blanks left out.
+pub fn ansi_line(runs: &[Run]) -> String {
+    let mut line = String::new();
+    let mut at = 0u16;
+    for run in runs {
+        while at < run.col {
+            line.push(' ');
+            at += 1;
+        }
+        let sgr = sgr_of(&run.style);
+        if sgr.is_empty() {
+            line.push_str(&run.text);
+        } else {
+            line.push_str(&format!("\x1b[{sgr}m{}\x1b[0m", run.text));
+        }
+        at = run.col + run.width;
+    }
+    line.trim_end_matches(' ').to_owned()
+}
+
+fn sgr_of(style: &Style) -> String {
+    let mut codes: Vec<String> = Vec::new();
+    for (on, code) in [
+        (style.bold, "1"),
+        (style.dim, "2"),
+        (style.italic, "3"),
+        (style.underline, "4"),
+        (style.inverse, "7"),
+    ] {
+        if on {
+            codes.push(code.to_owned());
+        }
+    }
+    for (color, base) in [(style.fg, 38), (style.bg, 48)] {
+        match color {
+            Color::Default => {}
+            Color::Indexed(i) => codes.push(format!("{base};5;{i}")),
+            Color::Rgb(r, g, b) => codes.push(format!("{base};2;{r};{g};{b}")),
+        }
+    }
+    codes.join(";")
+}
+
+/// Every line a parser holds, scrollback first, as [`ansi_line`]s without
+/// trailing empty lines. Leaves the parser scrolled to the bottom.
+pub fn ansi_contents(parser: &mut vt100::Parser) -> String {
+    let (rows, cols) = parser.screen().size();
+    parser.screen_mut().set_scrollback(usize::MAX);
+    let history = parser.screen().scrollback();
+    let mut lines: Vec<String> = Vec::with_capacity(history + rows as usize);
+    // Line `i` (0 = oldest) is visible at offset `o` in row `i + o - history`.
+    let mut next = 0usize;
+    let mut offset = history;
+    loop {
+        parser.screen_mut().set_scrollback(offset);
+        let screen = parser.screen();
+        let top = history - offset;
+        while next < top + rows as usize {
+            let row = (next - top) as u16;
+            lines.push(ansi_line(&row_runs(screen, row, cols)));
+            next += 1;
+        }
+        if offset == 0 {
+            break;
+        }
+        offset = offset.saturating_sub(rows as usize);
+    }
+    parser.screen_mut().set_scrollback(0);
+    while lines.last().is_some_and(|l| l.is_empty()) {
+        lines.pop();
+    }
+    lines.join("\n")
 }
 
 fn style_of(cell: &vt100::Cell) -> Style {
@@ -201,8 +300,10 @@ pub enum ScrollDirection {
 }
 
 #[derive(Debug)]
-enum Command {
+pub(crate) enum Command {
     Input(Vec<u8>),
+    /// Key names for the backend to encode (herdr-core only).
+    Keys(Vec<String>),
     Resize {
         cols: u16,
         rows: u16,
@@ -233,6 +334,8 @@ impl Command {
                 "lines": lines,
             }),
             Command::Release => json!({"type": "terminal.release"}),
+            // The TUI session protocol has no named keys; never sent there.
+            Command::Keys(_) => serde_json::Value::Null,
         }
     }
 }
@@ -273,13 +376,19 @@ pub trait TerminalSink: Send + Sync + 'static {
 /// A writable controller of one pane. Dropping it releases the pane.
 pub struct TerminalSession {
     commands: mpsc::UnboundedSender<Command>,
+    /// Bounds input not yet out to the terminal (herdr-core, where input can
+    /// wait behind a named key for a while).
+    budget: Option<Arc<InputBudget>>,
+    /// When the owner first let go, for a backend that bounds its end from
+    /// that moment even while busy (herdr-core).
+    let_go: Option<tokio::sync::watch::Sender<Option<tokio::time::Instant>>>,
 }
 
 /// Longest line read from herdr (a frame is one base64 line); longer ends the session.
 const MAX_LINE: usize = 16 * 1024 * 1024;
 /// Largest terminal accepted from herdr.
-const MAX_COLS: u16 = 1000;
-const MAX_ROWS: u16 = 1000;
+pub(crate) const MAX_COLS: u16 = 1000;
+pub(crate) const MAX_ROWS: u16 = 1000;
 
 /// The next line without its newline, `None` at the end. A line longer than
 /// `max` bytes is an error: the reader must not grow without bound.
@@ -313,7 +422,7 @@ async fn next_line<R: AsyncBufRead + Unpin>(
 }
 
 /// Shortest gap between two screens sent to the sink (about 30 per second).
-const FRAME_GAP: std::time::Duration = std::time::Duration::from_millis(33);
+pub(crate) const FRAME_GAP: std::time::Duration = std::time::Duration::from_millis(33);
 
 impl TerminalSession {
     /// Attach to `pane_id` with a viewport of `cols × rows`, taking over
@@ -349,6 +458,9 @@ impl TerminalSession {
                         releasing.store(true, Ordering::SeqCst);
                         break;
                     };
+                    if matches!(command, Command::Keys(_)) {
+                        continue;
+                    }
                     let release = matches!(command, Command::Release);
                     if release {
                         releasing.store(true, Ordering::SeqCst);
@@ -457,14 +569,29 @@ impl TerminalSession {
             sink.ended(ended);
         });
 
-        Ok(Self { commands })
+        Ok(Self::from_commands(commands))
     }
 
     /// Raw bytes for the pane, as a terminal would send them (text, `\r`,
     /// escape sequences).
     pub fn input(&self, bytes: Vec<u8>) {
-        if !bytes.is_empty() {
+        if !bytes.is_empty() && self.budget.as_ref().is_none_or(|b| b.take(bytes.len(), 0)) {
             let _ = self.commands.send(Command::Input(bytes));
+        }
+    }
+
+    /// Key names (`ctrl+c`, `esc`, `alt+enter` …) that have no fixed bytes:
+    /// herdr-core encodes them for the program's keyboard mode, after the
+    /// input typed before them, once this session took the size. The TUI
+    /// backend has no such command and drops them.
+    pub fn keys(&self, keys: Vec<String>) {
+        if !keys.is_empty()
+            && self
+                .budget
+                .as_ref()
+                .is_none_or(|b| b.take(key_bytes(&keys), 1))
+        {
+            let _ = self.commands.send(Command::Keys(keys));
         }
     }
 
@@ -485,7 +612,116 @@ impl TerminalSession {
 
     /// Give the pane back; herdr restores its size for the other clients.
     pub fn release(&self) {
+        if let Some(let_go) = &self.let_go {
+            let_go.send_if_modified(|at| {
+                at.is_none()
+                    .then(|| *at = Some(tokio::time::Instant::now()))
+                    .is_some()
+            });
+        }
         let _ = self.commands.send(Command::Release);
+    }
+}
+
+impl TerminalSession {
+    /// A session driven by another backend's task reading `commands`.
+    pub(crate) fn from_commands(commands: mpsc::UnboundedSender<Command>) -> Self {
+        Self {
+            commands,
+            budget: None,
+            let_go: None,
+        }
+    }
+
+    /// Like [`Self::from_commands`], also telling the backend when the owner
+    /// first let go.
+    pub(crate) fn from_commands_with_let_go(
+        commands: mpsc::UnboundedSender<Command>,
+        let_go: tokio::sync::watch::Sender<Option<tokio::time::Instant>>,
+        budget: Arc<InputBudget>,
+    ) -> Self {
+        Self {
+            commands,
+            budget: Some(budget),
+            let_go: Some(let_go),
+        }
+    }
+}
+
+/// Most bytes of typed input (key names count with their length) waiting to
+/// go out: in the command channel or queued in the session.
+const INPUT_BUDGET: usize = 4 << 20;
+/// Most groups of named keys waiting to go out.
+const KEYS_BUDGET: usize = 256;
+
+/// The bytes a group of named keys holds while it waits.
+pub(crate) fn key_bytes(keys: &[String]) -> usize {
+    keys.iter().map(String::len).sum()
+}
+
+/// Bounds input that is typed but not yet out. Once something does not fit,
+/// everything after it is refused too until what waited is out, so the
+/// terminal never gets a stream with a hole in the middle.
+pub(crate) struct InputBudget {
+    state: Mutex<BudgetState>,
+    refused: std::sync::atomic::AtomicU64,
+    changed: Arc<tokio::sync::Notify>,
+}
+
+#[derive(Default)]
+struct BudgetState {
+    bytes: usize,
+    keys: usize,
+    full: bool,
+}
+
+impl InputBudget {
+    /// `changed` is notified when input is refused.
+    pub(crate) fn new(changed: Arc<tokio::sync::Notify>) -> Self {
+        Self {
+            state: Mutex::new(BudgetState::default()),
+            refused: Default::default(),
+            changed,
+        }
+    }
+
+    /// Room for input of `bytes` (and `keys` groups of named keys); false
+    /// when it is refused.
+    pub(crate) fn take(&self, bytes: usize, keys: usize) -> bool {
+        let mut s = self.state.lock().expect("input budget lock");
+        if !s.full && s.bytes + bytes <= INPUT_BUDGET && s.keys + keys <= KEYS_BUDGET {
+            s.bytes += bytes;
+            s.keys += keys;
+            return true;
+        }
+        if !s.full {
+            // A cut, reported once; with nothing waiting there is nothing to
+            // keep the order behind (one input too large on its own).
+            s.full = s.bytes > 0 || s.keys > 0;
+            self.refused.fetch_add(1, Ordering::Relaxed);
+            self.changed.notify_one();
+        }
+        false
+    }
+
+    /// Input that did not come through [`Self::take`] (wheel events).
+    pub(crate) fn charge(&self, bytes: usize) {
+        self.state.lock().expect("input budget lock").bytes += bytes;
+    }
+
+    /// Input went out (or was dropped with the session's end).
+    pub(crate) fn give(&self, bytes: usize, keys: usize) {
+        let mut s = self.state.lock().expect("input budget lock");
+        s.bytes = s.bytes.saturating_sub(bytes);
+        s.keys = s.keys.saturating_sub(keys);
+        if s.bytes == 0 && s.keys == 0 {
+            s.full = false;
+        }
+    }
+
+    /// How often input was refused.
+    pub(crate) fn refused(&self) -> u64 {
+        self.refused.load(Ordering::Relaxed)
     }
 }
 
@@ -546,6 +782,13 @@ mod tests {
     }
 
     #[test]
+    fn reports_application_cursor_keys() {
+        assert!(!screen(b"x", 1, 10).app_cursor);
+        assert!(screen(b"\x1b[?1h", 1, 10).app_cursor);
+        assert!(!screen(b"\x1b[?1h\x1b[?1l", 1, 10).app_cursor);
+    }
+
+    #[test]
     fn groups_cells_into_runs() {
         let s = screen(b"\x1b[1;1Hab\x1b[31mcd\x1b[0m  e", 2, 10);
         let runs = &s.lines[0];
@@ -578,11 +821,61 @@ mod tests {
     }
 
     #[test]
+    fn ansi_text_keeps_colours_and_history() {
+        let mut vt = vt100::Parser::new(2, 20, 10);
+        vt.process(b"one\r\n\x1b[31mtwo\x1b[0m x\r\nthree\r\nfour");
+        assert_eq!(
+            ansi_contents(&mut vt),
+            "one\n\x1b[38;5;1mtwo\x1b[0m x\nthree\nfour"
+        );
+        assert_eq!(vt.screen().scrollback(), 0);
+        let mut vt = vt100::Parser::new(3, 10, 0);
+        vt.process(b"\x1b[1;44mA\x1b[0m");
+        assert_eq!(ansi_contents(&mut vt), "\x1b[1;48;5;4mA\x1b[0m");
+    }
+
+    #[test]
     fn script_quotes_its_arguments() {
         let script = control_script("/tmp/a b/herdr.sock", "w1:p1", 60, 20);
         assert!(script.contains("HERDR_SOCKET_PATH='/tmp/a b/herdr.sock' exec"));
         assert!(script.contains("control 'w1:p1' --takeover --cols 60 --rows 20 2>&1"));
         assert!(!script.contains('\\'));
+    }
+
+    #[test]
+    fn input_past_the_budget_is_cut_cleanly() {
+        let changed = Arc::new(tokio::sync::Notify::new());
+        let budget = InputBudget::new(changed);
+        assert!(budget.take(INPUT_BUDGET - 1, 0));
+        // Does not fit: refused, and so is everything after it, even small.
+        assert!(!budget.take(2, 0));
+        assert!(!budget.take(1, 0));
+        assert!(!budget.take(0, 1));
+        assert_eq!(budget.refused(), 1);
+        // Once what waited is out, input goes again.
+        budget.give(INPUT_BUDGET - 1, 0);
+        assert!(budget.take(1, 0));
+        assert_eq!(budget.refused(), 1);
+    }
+
+    #[test]
+    fn key_groups_count_apart_from_bytes() {
+        let budget = InputBudget::new(Arc::new(tokio::sync::Notify::new()));
+        for _ in 0..KEYS_BUDGET {
+            assert!(budget.take(3, 1));
+        }
+        assert!(!budget.take(3, 1));
+        assert!(!budget.take(1, 0));
+        budget.give(3 * KEYS_BUDGET, KEYS_BUDGET);
+        assert!(budget.take(1, 0));
+    }
+
+    #[test]
+    fn one_input_too_large_on_its_own_leaves_no_cut() {
+        let budget = InputBudget::new(Arc::new(tokio::sync::Notify::new()));
+        assert!(!budget.take(INPUT_BUDGET + 1, 0));
+        assert!(budget.take(1, 0));
+        assert_eq!(budget.refused(), 1);
     }
 
     #[test]

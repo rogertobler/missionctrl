@@ -72,6 +72,7 @@ import ch.inscribe.missionctrl.Core
 import ch.inscribe.missionctrl.R
 import ch.inscribe.missionctrl.SpeechPrefs
 import ch.inscribe.missionctrl.core.AgentRow
+import ch.inscribe.missionctrl.core.WorkspaceRow
 import ch.inscribe.missionctrl.core.Connection
 import ch.inscribe.missionctrl.core.Status
 import kotlinx.coroutines.CoroutineScope
@@ -84,6 +85,8 @@ private val blockedSince = mutableStateMapOf<String, Long>()
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MissionScreen(core: Core, nav: Nav, compact: Boolean) {
+    val tags = rememberServerTags(core)
+    val fixedLayouts = rememberFixedLayouts(core)
     val c = LocalMc.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -110,7 +113,7 @@ fun MissionScreen(core: Core, nav: Nav, compact: Boolean) {
     val others = tabLines(state).filter { it !is TabLine.Agent || it.a.status != Status.BLOCKED || Core.key(it.a) in closed }
     val issues = state.servers.filter {
         it.connection is Connection.HostKeyUnknown || it.connection is Connection.HostKeyChanged ||
-            it.connection is Connection.AuthFailed || it.connection is Connection.Failed
+            it.connection is Connection.AuthFailed || it.connection is Connection.Failed || it.connection is Connection.Incompatible
     }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -134,7 +137,7 @@ fun MissionScreen(core: Core, nav: Nav, compact: Boolean) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 McIcon(McIcons.Server, c.danger, 16.dp)
-                Text(stringResource(R.string.mission_server_issue, s.name, issueText(s.connection)), style = McType.small, color = c.text, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.mission_server_issue, serverLabel(s.name, tags[s.id]), issueText(s.connection)), style = McType.small, color = c.text, modifier = Modifier.weight(1f))
                 McIcon(McIcons.Chevron, c.muted, 16.dp)
             }
         }
@@ -162,23 +165,24 @@ fun MissionScreen(core: Core, nav: Nav, compact: Boolean) {
                 item(key = "g-" + key.first + key.second) {
                     var menu by remember { mutableStateOf(false) }
                     MoveMenu(menu, first.workspace, core.workspacePosition(key.first, key.second), onDismiss = { menu = false }, onMove = { d ->
-                        scope.launch { runCatching { core.moveWorkspace(key.first, key.second, d) }.onFailure { context.toast(it.message) } }
+                        scope.launch { runCatching { core.moveWorkspace(key.first, key.second, d) }.onFailure { context.toastError(it) } }
                     })
                     // A tap opens the workspace's terminal; only ⚙ leads to its settings.
                     val ws = state.workspaces.firstOrNull { it.serverId == key.first && it.workspaceId == key.second }
                     Row(
                         Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(10.dp))
-                            .combinedClickable(onClick = { ws?.mainPaneId()?.let { nav.openDetail(key.first, it) } }, onLongClick = { menu = true }, onLongClickLabel = stringResource(R.string.mission_move))
+                            .combinedClickable(onClick = { ws?.mainPaneId()?.let { nav.openDetail(key.first, it) } }, onLongClick = if (key.first in fixedLayouts || key.second == UNSORTED_WORKSPACE) null else { { menu = true } }, onLongClickLabel = stringResource(R.string.mission_move))
                             .padding(start = 8.dp, top = 2.dp, bottom = 2.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         WorkspaceMark(core, first.serverId, first.workspaceId, first.workspace, 16.dp)
                         Text(first.workspace, style = McType.bodyStrong, color = c.text)
-                        Text(first.serverName, style = McType.path, color = c.muted, modifier = Modifier.weight(1f))
+                        Text(serverLabel(first.serverName, tags[first.serverId]), style = McType.path, color = c.muted, modifier = Modifier.weight(1f))
                         IconAction(McIcons.Sliders, stringResource(R.string.mission_workspace_settings, first.workspace), size = 40.dp, iconSize = 16.dp) { nav.go(Screen.Workspace(key.first, key.second)) }
                     }
                 }
-                items(list, key = { it.key }) { line -> TabLineRow(core, nav, line, indent = true, now = now) { sheetFor = it } }
+                val group = state.workspaces.firstOrNull { it.serverId == key.first && it.workspaceId == key.second }
+                items(list, key = { it.key }) { line -> TabLineRow(core, nav, line, indent = true, now = now, ws = group) { sheetFor = it } }
             }
         } else {
             items(others, key = { it.key }) { line -> TabLineRow(core, nav, line, indent = false, now = now) { sheetFor = it } }
@@ -193,6 +197,7 @@ private fun issueText(c: Connection) = when (c) {
     is Connection.HostKeyChanged -> stringResource(R.string.mission_issue_host_key_changed)
     is Connection.AuthFailed -> stringResource(R.string.mission_issue_auth_failed)
     is Connection.Failed -> c.message
+    is Connection.Incompatible -> stringResource(R.string.conn_incompatible)
     else -> ""
 }
 
@@ -253,8 +258,12 @@ private fun ConnectingNote(core: Core, servers: List<ServerRow>) {
 
 /** A line of the start page: an agent or a tab without one; long press: options. */
 @Composable
-private fun TabLineRow(core: Core, nav: Nav, line: TabLine, indent: Boolean, now: Long, onOptions: (TabLine) -> Unit) = when (line) {
-    is TabLine.Agent -> AgentLine(core, line.a, indent = indent, now = now, onLongClick = { onOptions(line) }) { nav.openDetail(line.a.serverId, line.a.paneId) }
+private fun TabLineRow(core: Core, nav: Nav, line: TabLine, indent: Boolean, now: Long, ws: WorkspaceRow? = null, onOptions: (TabLine) -> Unit) = when (line) {
+    is TabLine.Agent -> {
+        // Under its workspace an agent row is named after its tab, the same way as a shell row.
+        val tabName = ws?.tabs?.firstOrNull { it.tabId == line.a.tabId }?.let { tabListName(ws, it) }
+        AgentLine(core, line.a, indent = indent, now = now, tabName = tabName, onLongClick = { onOptions(line) }) { nav.openDetail(line.a.serverId, line.a.paneId) }
+    }
     is TabLine.Shell -> ShellLine(core, line, indent, onLongClick = { onOptions(line) }) { nav.openDetail(line.serverId, line.paneId) }
 }
 
@@ -273,7 +282,7 @@ fun ShellLine(core: Core, line: TabLine.Shell, indent: Boolean, onLongClick: (()
         if (!indent) WorkspaceMark(core, ws.serverId, ws.workspaceId, ws.label, tab = tab.label)
         AgentGlyph(core, tab.agentType, null, tab = TabRef(ws.serverId, ws.workspaceId, ws.label, tab.label))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            EllipsisText(if (indent) tab.label else tabTitleOf(core, tab.label, ws.label, tab.label), McType.body, c.text)
+            EllipsisText(if (indent) tabListName(ws, tab) else tabTitleOf(core, tab.label, ws.label, tab.label), McType.body, c.text)
             val dir = tab.cwd?.substringAfterLast('/')
             EllipsisText(if (indent) dir.orEmpty() else listOfNotNull(ws.label, dir).joinToString(" › "), McType.path, c.muted)
         }
@@ -288,7 +297,7 @@ fun ShellLine(core: Core, line: TabLine.Shell, indent: Boolean, onLongClick: (()
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AgentLine(core: Core, a: AgentRow, indent: Boolean = false, now: Long = System.currentTimeMillis(), onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+fun AgentLine(core: Core, a: AgentRow, indent: Boolean = false, now: Long = System.currentTimeMillis(), tabName: String? = null, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val c = LocalMc.current
     val screen by remember(a.serverId, a.paneId) { core.screen(a.serverId, a.paneId) }.collectAsState()
     val working = a.status == Status.WORKING
@@ -309,7 +318,7 @@ fun AgentLine(core: Core, a: AgentRow, indent: Boolean = false, now: Long = Syst
         AgentGlyph(core, a)
         // Name narrower, what it does wider and a little larger.
         Column(Modifier.weight(if (activity != null) 0.7f else 1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            EllipsisText(if (indent) (a.tab ?: a.name) else agentTitleOf(core, a), McType.body.copy(fontWeight = FontWeight.Medium), c.text)
+            EllipsisText(if (indent) (tabName ?: a.tab ?: a.name) else agentTitleOf(core, a), McType.body.copy(fontWeight = FontWeight.Medium), c.text)
             EllipsisText(if (indent) (a.title ?: a.name) else pathLineOf(core, a), McType.path, c.muted)
         }
         if (activity != null) {
@@ -381,7 +390,11 @@ fun tabStatus(s: Status): String = when (s) {
 }
 
 @Composable
-fun statusText(a: AgentRow): String = tabStatus(a.status).ifEmpty { a.statusLabel.ifBlank { "—" } }
+fun statusText(a: AgentRow): String =
+    if (a.isError()) stringResource(R.string.status_error) else tabStatus(a.status).ifEmpty { a.statusLabel.ifBlank { "—" } }
+
+/** herdr-core's "error": shown like waiting, with its own word. */
+fun AgentRow.isError() = status == Status.BLOCKED && statusLabel == "error"
 
 @Composable
 private fun WaitingCard(core: Core, nav: Nav, a: AgentRow, age: String, scope: CoroutineScope) {

@@ -249,7 +249,7 @@ object PaneTextTools {
     private val markdownLink = Regex("""\[([^\]]+)\]\([^)\s]+\)""")
 
     /**
-     * Joins lines the agent wrapped at the laptop's width back into paragraphs (same rules as
+     * Joins lines the agent wrapped at the desktop's width back into paragraphs (same rules as
      * the terminal view, [Reflow.continues]), so the phone wraps them once, at its own width.
      */
     fun unwrap(question: String): String {
@@ -306,7 +306,7 @@ object PaneTextTools {
 
     /**
      * Keys for [picked] against the screen as it is now: the cursor may have
-     * moved on the laptop, or another question may be open. Null if that option is no longer there.
+     * moved on the desktop, or another question may be open. Null if that option is no longer there.
      */
     fun chooseNow(screen: String, picked: MenuOption): List<String>? {
         val now = menu(question(screen)) ?: return null
