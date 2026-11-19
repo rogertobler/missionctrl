@@ -21,11 +21,11 @@
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="Mission list with an agent waiting for an answer">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="A pane as a terminal, with the key bar below">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="200" alt="Workspaces and tabs of a server with the state of each agent">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="200" alt="Dictation settings with local Whisper models">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/9.png" width="200" alt="Dictation settings with your own words and replacements">
 </p>
 
 <p align="center">
-  <sub>Answer a waiting agent · work in a pane · workspaces and tabs · dictation with Whisper</sub>
+  <sub>Answer a waiting agent · work in a pane · workspaces and tabs · dictation with your own words</sub>
 </p>
 
 <p align="center">
@@ -65,7 +65,9 @@ project; "herdr" here only names the software the app works with.
   closed too if you let it stay connected in the background. No push service is involved, and
   you can answer from the notification
 - **Dictation on the device** with a local Whisper model (whisper.cpp) or Android's on-device
-  recognition (Android 12 and later, where the device offers it); the audio stays on the phone
+  recognition (Android 12 and later, where the device offers it); the audio stays on the phone.
+  Words: the technical terms the recognition should expect (above all with Whisper). Replacements:
+  if a word still comes out wrong, set what should stand in its place, e.g. "Herder" becomes "herdr"
 - **Servers and SSH keys:** several of each; create an Ed25519 key in the app or import one
   (OpenSSH, PEM, PuTTY), or log in with a password. Private keys are encrypted with the Android
   Keystore, with optional fingerprint, face or device PIN on top
