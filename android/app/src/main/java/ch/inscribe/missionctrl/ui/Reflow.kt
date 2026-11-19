@@ -44,16 +44,23 @@ object Reflow {
             if (isSeparator(line.text)) { out += DisplayLine(shrinkRule(line, phoneCols), noWrap = true); i++; continue }
             // Join the agent's own wrapping back into one paragraph.
             if (narrower) {
-                while (i + 1 < fixed.size && continues(line.text, fixed[i + 1].text, paneCols)) {
+                // The row before decides (its length, its indent), not the paragraph joined so far.
+                while (i + 1 < fixed.size) {
+                    // The following rows run together: a path over several rows ends in one of them.
+                    val ahead = (i + 1 until minOf(fixed.size, i + 6)).joinToString("") { fixed[it].text.trim() }
+                    val head = trimEnd(line)
+                    val pathBreak = ImagePaths.brokenAcross(head.text, ahead)
+                    if (!continues(fixed[i].text, fixed[i + 1].text, paneCols, pathBreak)) break
                     val next = fixed[i + 1]
                     val start = next.text.length - next.text.trimStart().length
-                    val head = trimEnd(line)
                     // "Spiel-" + "Merker": the agent broke a hyphenated word, join without a space.
                     val hyphen = head.text.length >= 2 && head.text.last() == '-' && head.text[head.text.length - 2].isLetter()
+                    // "…Read(/tmp/sh" + "ot.png)": the terminal broke a path, join it whole.
+                    val broken = pathBreak
                     // The joining space takes the style of the indent it replaces, so a coloured
                     // block (Claude's grey prompt box) has no holes.
                     val gap = if (start > 0) next.subSequence(start - 1, start) else AnnotatedString(" ")
-                    line = buildAnnotatedString { append(head); if (!hyphen) append(gap); append(next.subSequence(start, next.length)) }
+                    line = buildAnnotatedString { append(head); if (!hyphen && !broken) append(gap); append(next.subSequence(start, next.length)) }
                     i++
                 }
                 if (line.text.trimEnd().length > phoneCols) line = shrinkSpaces(line, phoneCols)
@@ -83,11 +90,13 @@ object Reflow {
     }
 
     /** [next] carries on the paragraph of [line], which the agent wrapped at [paneCols]. */
-    fun continues(line: String, next: String, paneCols: Int): Boolean {
+    fun continues(line: String, next: String, paneCols: Int, pathBreak: Boolean = false): Boolean {
         val a = line.trimEnd()
         val b = next.trimEnd()
         if (a.isBlank() || b.isBlank()) return false
         if (a.length < paneCols - 14) return false // not full: the paragraph ended here
+        // The terminal broke a path here, whatever the indent of the next row.
+        if (pathBreak) return true
         if (isSeparator(a) || isSeparator(b)) return false
         if (boxChars.containsMatchIn(a) || boxChars.containsMatchIn(b)) return false
         if (listMarker.find(b) != null) return false // a new item, not a continuation

@@ -899,4 +899,16 @@
     <string name="close_sheet" tools:ignore="PrivateResource,MissingTranslation,ExtraTranslation,UnusedResources">Blatt schliessen</string>
     <string name="m3c_bottom_sheet_dismiss_description" tools:ignore="PrivateResource,MissingTranslation,ExtraTranslation,UnusedResources">Blatt schliessen</string>
     <string name="m3c_snackbar_dismiss" tools:ignore="PrivateResource,MissingTranslation,ExtraTranslation,UnusedResources">Schliessen</string>
+    <!-- Bildvorschau (Verlauf und Live-Terminal) -->
+    <string name="image_loading">Lade Bild …</string>
+    <string name="image_missing">Bild nicht mehr auf dem Server</string>
+    <string name="image_too_large">Bild zu gross für die Vorschau (%1$s)</string>
+    <string name="image_failed">Bild konnte nicht geladen werden</string>
+    <string name="image_open_desc">Bild %1$s – tippen zum Vergrössern</string>
+    <string name="image_viewer_close">Bild schliessen</string>
+    <plurals name="image_live_button">
+        <item quantity="one">%1$d Bild</item>
+        <item quantity="other">%1$d Bilder</item>
+    </plurals>
+    <string name="image_live_title">Bilder im Terminal</string>
 </resources>

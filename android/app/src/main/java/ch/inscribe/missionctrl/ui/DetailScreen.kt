@@ -37,9 +37,11 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -469,6 +471,8 @@ private fun OutputView(core: Core, p: PaneRef, status: Status?, active: Boolean,
     val density = LocalDensity.current
     val charPx = remember(style, density) { measurer.measure("0".repeat(20), style).size.width / 20f }
     val charSp = charPx / (density.density * density.fontScale)
+    var viewing by remember { mutableStateOf<Pair<ImageBitmap, String>?>(null) }
+    viewing?.let { (bitmap, path) -> ImageViewer(bitmap, path, onDismiss = { viewing = null }) }
     BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 12.dp).clip(RoundedCornerShape(14.dp)).background(scheme.bg())) {
         val cols = with(density) { ((maxWidth - 28.dp).toPx() / charPx).toInt() }
         // Colours and line fitting off the main thread; the old lines stay until the new ones are ready.
@@ -480,16 +484,25 @@ private fun OutputView(core: Core, p: PaneRef, status: Status?, active: Boolean,
                 Reflow.layout(lines, cols).reversed()
             }
         }
+        // Images the output names, previewed under the line that names each first (not in the demo).
+        val cwd = remember(p.serverId, p.paneId, display) { core.paneCwd(p.serverId, p.paneId) }
+        val images = remember(display, cwd) { if (p.serverId == DemoFleet.SERVER) emptyMap() else ImagePaths.anchors(display, cwd) }
         SelectionContainer {
             LazyColumn(state = listState, reverseLayout = true, contentPadding = PaddingValues(14.dp), modifier = Modifier.fillMaxSize()) {
                 items(display.size) { i ->
                     val d = display[i]
-                    Text(
-                        if (d.text.isEmpty()) AnnotatedString(" ") else d.text,
-                        style = if (d.hang > 0) style.copy(textIndent = TextIndent(restLine = (d.hang * charSp).sp)) else style,
-                        color = scheme.fg(), softWrap = !d.noWrap, maxLines = if (d.noWrap) 1 else Int.MAX_VALUE,
-                        overflow = TextOverflow.Clip,
-                    )
+                    Column {
+                        Text(
+                            if (d.text.isEmpty()) AnnotatedString(" ") else d.text,
+                            style = if (d.hang > 0) style.copy(textIndent = TextIndent(restLine = (d.hang * charSp).sp)) else style,
+                            color = scheme.fg(), softWrap = !d.noWrap, maxLines = if (d.noWrap) 1 else Int.MAX_VALUE,
+                            overflow = TextOverflow.Clip,
+                        )
+                        images[i]?.forEach { path ->
+                            // Keyed by path: a line shifting into this slot must not show the previous image.
+                            key(path) { ImagePreview(core, p.serverId, path, cwd, onOpen = { viewing = it to path }) }
+                        }
+                    }
                 }
                 // Only once there are lines: alone in the first frame, the list took this keyed item
                 // as its anchor and followed it to the top when the lines came (a Claude tab longer

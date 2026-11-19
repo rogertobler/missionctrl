@@ -1,5 +1,10 @@
 package ch.inscribe.missionctrl.ui
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.graphics.ImageBitmap
 import android.content.Context
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculateZoom
@@ -34,6 +39,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -592,8 +602,76 @@ fun TuiView(core: Core, p: PaneRef, active: Boolean, link: TuiLink) {
                 ) { Text(stringResource(R.string.tui_take_back), style = McType.small, color = c.text) }
             }
         }
+        // Images the screen names: no room for them in the grid, so a button lists them.
+        val shownScreen = live.screen
+        val images = remember(shownScreen?.seq) { shownScreen?.let { ImagePaths.find(screenText(it)).asReversed() }.orEmpty() }
+        if (images.isNotEmpty()) LiveImagesButton(core, p, images, Modifier.align(Alignment.TopEnd).padding(8.dp))
     }
     }
+}
+
+/**
+ * The text of a live terminal, with the gaps between runs as spaces. A row that ends near the
+ * right edge inside an image path runs on into the next: the terminal wrapped the path there.
+ */
+internal fun screenText(screen: TermScreen): String {
+    val rows = screen.lines.map { line ->
+        buildString { for (r in line.runs.sortedBy { it.col }) { while (length < r.col.toInt()) append(' '); append(r.text) } }.trimEnd()
+    }
+    val out = StringBuilder()
+    rows.forEachIndexed { i, row ->
+        val prev = rows.getOrNull(i - 1)
+        // Checked against the line joined so far, so a path over three rows stays whole.
+        val ahead = rows.subList(i, minOf(rows.size, i + 5)).joinToString("") { it.trimStart() }
+        val wrapped = prev != null && prev.length >= screen.cols.toInt() - 8 && ImagePaths.brokenAcross(out.substring(out.lastIndexOf('\n') + 1), ahead)
+        when {
+            i == 0 -> out.append(row)
+            wrapped -> out.append(row.trimStart())
+            else -> out.append('\n').append(row)
+        }
+    }
+    return out.toString()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LiveImagesButton(core: Core, p: PaneRef, paths: List<String>, modifier: Modifier) {
+    val c = LocalMc.current
+    var open by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf<Pair<ImageBitmap, String>?>(null) }
+    val cwd = remember(p.serverId, p.paneId, paths) { core.paneCwd(p.serverId, p.paneId) }
+    // Relative names count only once the file is found there: often they are just words in prose.
+    // Kept across screen changes, so the count and an open sheet do not flicker.
+    val found = remember(p.serverId, p.paneId, cwd) { mutableStateMapOf<String, Boolean>() }
+    LaunchedEffect(paths, cwd) {
+        // Again now and then: a file may appear later, or the connection come back.
+        while (true) {
+            core.awaitVisible() // quiet while the app is in the background
+            for (path in paths.filter(ImagePaths::isRelative)) {
+                found[path] = cwd != null && ImageCache.load(core, p.serverId, path, cwd).let { it != ImageState.Missing && it != ImageState.Failed }
+            }
+            delay(RECHECK_MS)
+        }
+    }
+    // Absolute names first, so `./a.png` and `/dir/a.png` show once, under the full path.
+    val shown = paths.sortedBy(ImagePaths::isRelative).distinctBy { ImagePaths.resolve(it, cwd) }
+        .filter { !ImagePaths.isRelative(it) || found[it] == true }
+    if (shown.isNotEmpty()) Box(
+        modifier.clip(RoundedCornerShape(8.dp)).background(c.surface).border(1.dp, c.line, RoundedCornerShape(8.dp))
+            .clickable(role = Role.Button) { open = true }.padding(horizontal = 10.dp, vertical = 6.dp),
+    ) { Text(pluralStringResource(R.plurals.image_live_button, shown.size, shown.size), style = McType.small, color = c.text) }
+    if (open && shown.isNotEmpty()) {
+        ModalBottomSheet(onDismissRequest = { open = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = c.bg) {
+            // Lazy, so only the images in view hold a bitmap.
+            LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
+                item { Text(stringResource(R.string.image_live_title), style = McType.title, color = c.text) }
+                items(shown, key = { it }) { path ->
+                    ImagePreview(core, p.serverId, path, cwd, showPath = true, onOpen = { viewing = it to path })
+                }
+            }
+        }
+    }
+    viewing?.let { (bitmap, path) -> ImageViewer(bitmap, path, onDismiss = { viewing = null }) }
 }
 
 /**

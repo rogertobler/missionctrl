@@ -136,6 +136,43 @@ impl Transport {
             .await
     }
 
+    /// An image file an agent named on its screen (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`),
+    /// absolute, `~/…`, or relative to `cwd`. Files larger than [IMAGE_MAX] are not sent.
+    /// `known` is the stamp of a copy the caller already has: if the file still matches it,
+    /// nothing is sent ([ImageFile::Unchanged]). Other paths are refused: the path comes
+    /// from pane output.
+    pub async fn read_image(
+        &self,
+        path: &str,
+        cwd: Option<&str>,
+        known: Option<&str>,
+    ) -> Result<ImageFile> {
+        let env = self.remote_env().await?;
+        let full = image_path(&env.home, cwd, path)
+            .ok_or_else(|| Error::Protocol(format!("not an image path: {path}")))?;
+        let script = image_script(&full, known.unwrap_or(""));
+        let out = match self {
+            #[cfg(unix)]
+            Transport::Local(t) => t.exec_sh(&script).await?,
+            Transport::Ssh(t) => {
+                // Several megabytes as base64 can take longer than a short command on a slow
+                // line; output beyond the largest image is not read.
+                let out = t
+                    .run_capped(
+                        "sh",
+                        with_mark(&script).as_bytes(),
+                        IMAGE_TIMEOUT,
+                        IMAGE_REPLY_CAP,
+                    )
+                    .await?;
+                let stdout = String::from_utf8(out.stdout)
+                    .map_err(|_| Error::Protocol("remote output is not UTF-8".into()))?;
+                after_mark(&stdout)?
+            }
+        };
+        parse_image(&out)
+    }
+
     /// Run a POSIX `sh` script on the herdr machine and return its stdout,
     /// whatever the login shell is (fish, …) and whatever it prints itself.
     pub async fn exec_sh(&self, script: &str) -> Result<String> {
@@ -482,6 +519,18 @@ impl SshTransport {
     /// Run `command`, feed it `stdin`, and collect its output until the
     /// channel closes.
     async fn run(&self, command: &str, stdin: &[u8], limit: Duration) -> Result<Output> {
+        self.run_capped(command, stdin, limit, usize::MAX).await
+    }
+
+    /// [`Self::run`], but stop reading once stdout exceeds `cap` bytes (the
+    /// output is then cut off and the channel dropped).
+    async fn run_capped(
+        &self,
+        command: &str,
+        stdin: &[u8],
+        limit: Duration,
+        cap: usize,
+    ) -> Result<Output> {
         tokio::time::timeout(limit, async {
             let mut channel = self.handle.channel_open_session().await?;
             channel.exec(true, command).await?;
@@ -490,9 +539,18 @@ impl SshTransport {
             let mut out = Output::default();
             while let Some(msg) = channel.wait().await {
                 match msg {
-                    russh::ChannelMsg::Data { data } => out.stdout.extend_from_slice(&data),
+                    russh::ChannelMsg::Data { data } => {
+                        out.stdout.extend_from_slice(&data);
+                        if out.stdout.len() > cap {
+                            // Dropping the channel does not close it: tell the server to stop.
+                            let _ = channel.close().await;
+                            break;
+                        }
+                    }
                     russh::ChannelMsg::ExtendedData { data, .. } => {
-                        out.stderr.extend_from_slice(&data)
+                        if out.stderr.len() < cap.min(64 * 1024) {
+                            out.stderr.extend_from_slice(&data)
+                        }
                     }
                     russh::ChannelMsg::ExitStatus { exit_status } => out.status = Some(exit_status),
                     russh::ChannelMsg::Close => break,
@@ -656,6 +714,95 @@ fn plan_path(home: &str, raw: &str) -> Option<String> {
         None => return None,
     };
     (!full.contains('~')).then_some(full)
+}
+
+/// Largest image [`Transport::read_image`] sends.
+pub const IMAGE_MAX: u64 = 8 * 1024 * 1024;
+const IMAGE_TIMEOUT: Duration = Duration::from_secs(60);
+/// Most output read for one image: base64 of [IMAGE_MAX] plus the header line.
+const IMAGE_REPLY_CAP: usize = (IMAGE_MAX as usize).div_ceil(3) * 4 + 4096;
+
+/// What [`Transport::read_image`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ImageFile {
+    /// The file, and its stamp (size and modification time) to pass as `known` next time.
+    Data { data: Vec<u8>, stamp: String },
+    /// Same size and modification time as the `known` stamp; nothing sent.
+    Unchanged,
+    /// No readable file at that path (any more).
+    Missing,
+    /// The file is larger than [IMAGE_MAX]; its size in bytes.
+    TooLarge(u64),
+}
+
+/// An image file path from pane output, `~` expanded and relative paths joined to `cwd`;
+/// None for anything else (other files, `..`, shell characters, relative without `cwd`).
+fn image_path(home: &str, cwd: Option<&str>, raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    let allowed = |c: char| c.is_ascii_alphanumeric() || "._-/~+@".contains(c);
+    if raw.is_empty() || !raw.chars().all(allowed) || raw.contains("..") {
+        return None;
+    }
+    let ext = raw.rsplit_once('.')?.1.to_ascii_lowercase();
+    if !["png", "jpg", "jpeg", "webp", "gif"].contains(&ext.as_str()) {
+        return None;
+    }
+    let full = if let Some(rest) = raw.strip_prefix("~/") {
+        format!("{}/{rest}", home.trim_end_matches('/'))
+    } else if raw.starts_with('/') {
+        raw.to_owned()
+    } else {
+        let cwd = cwd.filter(|c| c.starts_with('/') && !c.contains(".."))?;
+        let rel = raw.strip_prefix("./").unwrap_or(raw);
+        format!("{}/{rel}", cwd.trim_end_matches('/'))
+    };
+    (!full.contains('~')).then_some(full)
+}
+
+/// POSIX shell script for [`Transport::read_image`]: `missing`, `same` (matches `known`),
+/// `large <bytes>`, or `ok <stamp>` and the file as base64 on the next line. The stamp is
+/// the size and the modification time (`date -r`, with nanoseconds where `%N` works); without
+/// a `date -r` it is empty and the file is sent every time.
+fn image_script(full: &str, known: &str) -> String {
+    format!(
+        concat!(
+            "f={}; ",
+            "if [ ! -f \"$f\" ] || [ ! -r \"$f\" ]; then echo missing; exit 0; fi; ",
+            "s=$(wc -c < \"$f\" | tr -d ' '); ",
+            "d=$(date -r \"$f\" +%s.%N 2>/dev/null); t=; [ -n \"$d\" ] && t=\"$s $d\"; ",
+            "if [ -n \"$t\" ] && [ \"$t\" = {} ]; then echo same; exit 0; fi; ",
+            "if [ \"$s\" -gt {} ]; then echo \"large $s\"; exit 0; fi; ",
+            "echo \"ok $t\"; head -c {} \"$f\" | base64 | tr -d '[:space:]'; echo"
+        ),
+        shell_quote(full),
+        shell_quote(known),
+        IMAGE_MAX,
+        IMAGE_MAX
+    )
+}
+
+fn parse_image(out: &str) -> Result<ImageFile> {
+    use base64::Engine as _;
+    let (head, rest) = out.split_once('\n').unwrap_or((out, ""));
+    let head = head.trim();
+    match head {
+        "missing" => return Ok(ImageFile::Missing),
+        "same" => return Ok(ImageFile::Unchanged),
+        _ => {}
+    }
+    if let Some(stamp) = head.strip_prefix("ok ").or((head == "ok").then_some("")) {
+        let data = base64::engine::general_purpose::STANDARD
+            .decode(rest.trim())
+            .map_err(|e| Error::Protocol(format!("image is not base64: {e}")))?;
+        return Ok(ImageFile::Data {
+            data,
+            stamp: stamp.to_owned(),
+        });
+    }
+    match head.strip_prefix("large ").and_then(|s| s.parse().ok()) {
+        Some(size) => Ok(ImageFile::TooLarge(size)),
+        None => Err(Error::Protocol(format!("unexpected image reply: {head:?}"))),
+    }
 }
 
 /// POSIX shell script for [`Transport::resolve_dir`]: `ok<TAB>path` or `missing`.
@@ -929,6 +1076,89 @@ mod tests {
         ] {
             assert_eq!(plan_path(home, bad), None, "{bad}");
         }
+    }
+
+    #[test]
+    fn image_paths_are_only_images() {
+        let home = "/home/me";
+        let cwd = Some("/srv/app");
+        for (raw, want) in [
+            ("/tmp/shot.png", "/tmp/shot.png"),
+            ("~/Pictures/a-b_c.JPG", "/home/me/Pictures/a-b_c.JPG"),
+            ("out/chart.webp", "/srv/app/out/chart.webp"),
+            ("./x@2x.gif", "/srv/app/x@2x.gif"),
+            ("img+1.jpeg", "/srv/app/img+1.jpeg"),
+        ] {
+            assert_eq!(image_path(home, cwd, raw).as_deref(), Some(want), "{raw}");
+        }
+        for bad in [
+            "~/.ssh/id_ed25519",
+            "/tmp/../etc/x.png",
+            "/tmp/a.png;rm",
+            "/tmp/a b.png",
+            "/tmp/$(id).png",
+            "/tmp/a.svg",
+            "/tmp/a.png.txt",
+            "",
+        ] {
+            assert_eq!(image_path(home, cwd, bad), None, "{bad}");
+        }
+        assert_eq!(image_path(home, None, "out/a.png"), None);
+        assert_eq!(image_path(home, Some("relative"), "out/a.png"), None);
+    }
+
+    #[test]
+    fn parses_image_replies() {
+        assert_eq!(parse_image("missing\n").unwrap(), ImageFile::Missing);
+        assert_eq!(parse_image("same\n").unwrap(), ImageFile::Unchanged);
+        assert_eq!(
+            parse_image("large 9000000\n").unwrap(),
+            ImageFile::TooLarge(9_000_000)
+        );
+        assert_eq!(
+            parse_image("ok 2 1700000000\naGk=\n").unwrap(),
+            ImageFile::Data {
+                data: b"hi".to_vec(),
+                stamp: "2 1700000000".into()
+            }
+        );
+        assert!(parse_image("ok 2 1\n!!\n").is_err());
+        // No `date -r` on the server: no stamp, so the file is never taken as unchanged.
+        assert_eq!(
+            parse_image("ok \naGk=\n").unwrap(),
+            ImageFile::Data {
+                data: b"hi".to_vec(),
+                stamp: String::new()
+            }
+        );
+        assert!(parse_image("what\n").is_err());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn read_image_runs_locally() {
+        let dir = std::env::temp_dir().join(format!("mc-img-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let png = [0x89u8, b'P', b'N', b'G', 0, 1, 2, 255];
+        std::fs::write(dir.join("a.png"), png).unwrap();
+        let t = Transport::Local(LocalTransport);
+        let cwd = dir.to_str();
+        let ImageFile::Data { data, stamp } = t.read_image("a.png", cwd, None).await.unwrap()
+        else {
+            panic!("no image data");
+        };
+        assert_eq!(data, png.to_vec());
+        assert!(stamp.starts_with("8 "), "{stamp}");
+        assert_eq!(
+            t.read_image("a.png", cwd, Some(&stamp)).await.unwrap(),
+            ImageFile::Unchanged
+        );
+        assert_eq!(
+            t.read_image("gone.png", cwd, None).await.unwrap(),
+            ImageFile::Missing
+        );
+        assert!(t.read_image("a.txt", cwd, None).await.is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

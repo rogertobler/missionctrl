@@ -928,4 +928,16 @@
         <item quantity="one">%1$d agent</item>
         <item quantity="other">%1$d agents</item>
     </plurals>
+    <!-- Image previews (history and live terminal) -->
+    <string name="image_loading">Loading image…</string>
+    <string name="image_missing">Image no longer on the server</string>
+    <string name="image_too_large">Image too large for a preview (%1$s)</string>
+    <string name="image_failed">Couldn\'t load the image</string>
+    <string name="image_open_desc">Image %1$s – tap to enlarge</string>
+    <string name="image_viewer_close">Close image</string>
+    <plurals name="image_live_button">
+        <item quantity="one">%1$d image</item>
+        <item quantity="other">%1$d images</item>
+    </plurals>
+    <string name="image_live_title">Images in the terminal</string>
 </resources>

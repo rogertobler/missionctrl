@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.toArgb
 import ch.inscribe.missionctrl.core.AgentRow
 import ch.inscribe.missionctrl.core.Connection
 import ch.inscribe.missionctrl.core.DetectedBackend
+import ch.inscribe.missionctrl.core.ImageRead
 import ch.inscribe.missionctrl.core.DirInfo
 import ch.inscribe.missionctrl.core.FleetObserver
 import ch.inscribe.missionctrl.core.FleetState
@@ -628,6 +629,15 @@ class Core(private val context: Context) : FleetObserver {
 
     /** The plan Claude asks about ([PaneTextTools.planPath]); the core reads only plan files. */
     suspend fun readPlan(serverId: String, path: String): String = notInDemo(serverId).let { mc.readPlan(serverId, path) }
+
+    /** An image a pane's output names ([ch.inscribe.missionctrl.ui.ImagePaths]); the core reads only image files. */
+    suspend fun readImage(serverId: String, path: String, cwd: String?, known: String?): ImageRead = notInDemo(serverId).let { mc.readImage(serverId, path, cwd, known) }
+
+    /** Working directory of a pane as herdr reports it: its agent's, else its tab's first pane. */
+    fun paneCwd(serverId: String, paneId: String): String? =
+        raw.agents.firstOrNull { it.serverId == serverId && it.paneId == paneId }?.cwd
+            ?: raw.workspaces.asSequence().filter { it.serverId == serverId }.flatMap { it.tabs.asSequence() }
+                .firstOrNull { it.firstPaneId == paneId }?.cwd
 
     suspend fun createTab(serverId: String, workspaceId: String, label: String?, cwd: String?, start: TabStart): String =
         notInDemo(serverId).let { _ -> mc.createTab(serverId, workspaceId, label, cwd, start) }

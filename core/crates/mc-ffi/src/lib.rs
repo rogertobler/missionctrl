@@ -394,6 +394,19 @@ pub struct WorkspaceRow {
     pub cwd: Option<String>,
 }
 
+/// Result of [`MissionCtrl::read_image`].
+#[derive(uniffi::Enum, Clone, Debug)]
+pub enum ImageRead {
+    /// The file and its stamp, to pass as `known` next time.
+    Data { data: Vec<u8>, stamp: String },
+    /// Still the same as the `known` stamp; nothing sent.
+    Unchanged,
+    /// No readable file at that path (any more).
+    Missing,
+    /// Larger than the app fetches; size in bytes.
+    TooLarge { size: u64 },
+}
+
 /// What a new tab runs.
 #[derive(uniffi::Enum, Clone, Debug)]
 pub enum TabStart {
@@ -1054,6 +1067,34 @@ impl MissionCtrl {
         let client = self.server(&server_id)?;
         self.run(async move { client.transport().read_plan(&path).await })
             .await
+    }
+
+    /// An image an agent named on its screen (absolute, `~/…`, or relative to `cwd`, the
+    /// pane's working directory); larger files and other paths are not read. With `known`
+    /// (the stamp of the copy the app has), an unchanged file is not sent again.
+    pub async fn read_image(
+        &self,
+        server_id: String,
+        path: String,
+        cwd: Option<String>,
+        known: Option<String>,
+    ) -> Result<ImageRead, McError> {
+        let client = self.server(&server_id)?;
+        let file = self
+            .run(async move {
+                client
+                    .transport()
+                    .read_image(&path, cwd.as_deref(), known.as_deref())
+                    .await
+            })
+            .await?;
+        use mc_core::transport::ImageFile;
+        Ok(match file {
+            ImageFile::Data { data, stamp } => ImageRead::Data { data, stamp },
+            ImageFile::Unchanged => ImageRead::Unchanged,
+            ImageFile::Missing => ImageRead::Missing,
+            ImageFile::TooLarge(size) => ImageRead::TooLarge { size },
+        })
     }
 
     /// Store a file (e.g. a pasted screenshot) on the server under
