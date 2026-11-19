@@ -18,14 +18,15 @@
 </p>
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="Mission list with an agent waiting for an answer">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="A pane as a terminal, with the key bar below">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="200" alt="Workspaces and tabs of a server with the state of each agent">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/9.png" width="200" alt="Dictation settings with your own words and replacements">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="170" alt="Mission list with an agent waiting for an answer">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/10.png" width="170" alt="An agent's chart previewed under the line that names it">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="170" alt="A pane as a terminal, with the key bar below">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="170" alt="Workspaces and tabs of a server with the state of each agent">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/9.png" width="170" alt="Dictation settings with your own words and replacements">
 </p>
 
 <p align="center">
-  <sub>Answer a waiting agent · work in a pane · workspaces and tabs · dictation with your own words</sub>
+  <sub>Answer a waiting agent · see the images your agents name · work in a pane · workspaces and tabs · dictation with your own words</sub>
 </p>
 
 <p align="center">
