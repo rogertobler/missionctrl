@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/mc-core", "crates/mc-cli", "crates/mc-ffi", "crates/mc-voice", "crates/uniffi-bindgen"]
 
 [workspace.package]
-version = "1.1.0"
+version = "1.1.1"
 edition = "2024"
 license = "GPL-3.0-or-later"
 publish = false
