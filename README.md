@@ -58,6 +58,9 @@ project; "herdr" here only names the software the app works with.
 - **A key bar** for what a phone keyboard lacks (arrows, Esc, Tab, Shift+Tab, Home/End,
   PgUp/PgDn, Del and more), with Ctrl, Alt and Shift to combine
 - **Images and files:** paste images and upload files to the server
+- **Image preview:** when an agent names an image file (a screenshot it read, a chart it saved),
+  the app fetches it over SSH and shows it under that line; tap for full screen and pinch zoom.
+  PNG, JPEG, WebP and GIF up to 8 MB
 - **Tabs and workspaces:** create, rename, move and close them
 - **herdr TUI and herdr-core:** when you add a server, the app finds out which of the two it
   runs; more under [herdr TUI and herdr-core](#herdr-tui-and-herdr-core)
